@@ -1,0 +1,29 @@
+[
+  {
+    "prompt_id": "prompt_a",
+    "framework": "ICIO (Instruction – Context – Input – Output)",
+    "template": "### INSTRUCTION\nTranslate the natural-language question in the INPUT section into one SQLite SELECT query that retrieves matching restaurants. Ignore any part of the question that is unrelated to restaurants (jokes, food comparisons, small talk).\n\n### CONTEXT\nDatabase schema (table, field, primary key, foreign key, type):\n{{SCHEMA}}\n\nRules about the data:\n- RESTAURANT.ID = LOCATION.RESTAURANT_ID. RESTAURANT.CITY_NAME and LOCATION.CITY_NAME join to GEOGRAPHIC.CITY_NAME.\n- All stored text is lowercase, so write string literals in lowercase.\n- REGION (e.g. 'bay area') and COUNTY live in GEOGRAPHIC; the street is LOCATION.STREET_NAME.\n- \"best\" means the highest RATING among the restaurants that fit the other conditions (return all ties).\n- \"rating above X\" means RATING > X; the parenthesised words after the number are only a description.\n- If nothing in the database can match (e.g. a food type that does not exist), the query should still be valid and simply return no rows.\n\n### INPUT\nQuestion: {{QUESTION}}\n\n### OUTPUT\nReturn ONLY the SQL query, on a single statement, with no explanation, comments or markdown fences.\nThe SELECT list must be exactly: LOCATION.HOUSE_NUMBER, RESTAURANT.NAME (in this order).",
+    "placeholders": [
+      "{{SCHEMA}}",
+      "{{QUESTION}}"
+    ]
+  },
+  {
+    "prompt_id": "prompt_b",
+    "framework": "Few-Shot (Few-Shot Learning)",
+    "template": "You convert questions about restaurants into SQLite queries. Study the examples, then answer the last question in the same way.\n\nSchema:\n{{SCHEMA}}\n\nConventions: RESTAURANT.ID = LOCATION.RESTAURANT_ID; city links to GEOGRAPHIC.CITY_NAME; all text is lowercase; the SELECT list is always LOCATION.HOUSE_NUMBER, RESTAURANT.NAME; irrelevant sentences in the question are ignored. Output only the SQL.\n\nQuestion: What is the best californian in portola valley ?\nSQL: SELECT L.HOUSE_NUMBER, R.NAME FROM RESTAURANT R JOIN LOCATION L ON L.RESTAURANT_ID = R.ID WHERE R.FOOD_TYPE = 'californian' AND R.CITY_NAME = 'portola valley' AND R.RATING = (SELECT MAX(RATING) FROM RESTAURANT WHERE FOOD_TYPE = 'californian' AND CITY_NAME = 'portola valley');\n\nQuestion: While comparing dumplings with pancakes for an imaginary picnic, give me a restaurant on timber creek dr in san jose with a rating above 1.7 (poorly rated or better)?\nSQL: SELECT L.HOUSE_NUMBER, R.NAME FROM RESTAURANT R JOIN LOCATION L ON L.RESTAURANT_ID = R.ID WHERE L.STREET_NAME = 'timber creek dr' AND L.CITY_NAME = 'san jose' AND R.RATING > 1.7;\n\nQuestion: what is the best basque in the bay area ?\nSQL: SELECT L.HOUSE_NUMBER, R.NAME FROM RESTAURANT R JOIN LOCATION L ON L.RESTAURANT_ID = R.ID JOIN GEOGRAPHIC G ON G.CITY_NAME = R.CITY_NAME WHERE R.FOOD_TYPE = 'basque' AND G.REGION = 'bay area' AND R.RATING = (SELECT MAX(R2.RATING) FROM RESTAURANT R2 JOIN GEOGRAPHIC G2 ON G2.CITY_NAME = R2.CITY_NAME WHERE R2.FOOD_TYPE = 'basque' AND G2.REGION = 'bay area');\n\nQuestion: What is the best place in winters for tea food ?\nSQL: SELECT L.HOUSE_NUMBER, R.NAME FROM RESTAURANT R JOIN LOCATION L ON L.RESTAURANT_ID = R.ID WHERE R.FOOD_TYPE = 'tea' AND R.CITY_NAME = 'winters' AND R.RATING = (SELECT MAX(RATING) FROM RESTAURANT WHERE FOOD_TYPE = 'tea' AND CITY_NAME = 'winters');\n\nQuestion: {{QUESTION}}\nSQL:",
+    "placeholders": [
+      "{{SCHEMA}}",
+      "{{QUESTION}}"
+    ]
+  },
+  {
+    "prompt_id": "prompt_c",
+    "framework": "CoT (Chain of Thought, as step-wise decomposition)",
+    "template": "You are translating a question about restaurants into a SQLite query, decomposing the problem into sub-steps before writing the final SQL.\n\nSchema:\n{{SCHEMA}}\n\nFacts: RESTAURANT.ID = LOCATION.RESTAURANT_ID; RESTAURANT.CITY_NAME / LOCATION.CITY_NAME join to GEOGRAPHIC.CITY_NAME; all stored text is lowercase; \"best\" = highest RATING among matching restaurants (keep ties); \"rating above X\" = RATING > X; the SELECT list must be LOCATION.HOUSE_NUMBER, RESTAURANT.NAME.\n\nQuestion: {{QUESTION}}\n\nSolve it in sub-steps and report the result of each sub-step in exactly this compact format (one short line each, no long explanations):\nIGNORE: <words of the question that are irrelevant to restaurants, or \"none\">\nFILTERS: <food type / city / street / region / county / rating condition / best, as column = value>\nTABLES: <tables that must be joined and the join conditions>\nRATING: <how \"best\" or the rating threshold is expressed>\nSQL: <the finished single-statement SQLite query>\n\nThe SQL: line must be last, and nothing may follow the query.",
+    "placeholders": [
+      "{{SCHEMA}}",
+      "{{QUESTION}}"
+    ]
+  }
+]
