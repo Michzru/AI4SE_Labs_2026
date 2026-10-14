@@ -130,6 +130,12 @@ def cause(r, labels, conn, regions):
             return "street name with suffix split (number / '#')"
     if re.search(r"HOUSE_NUMBER\s*=", sql):
         return "street name with suffix split (number / '#')"
+    if "FOOD_TYPE" not in sql.upper() and re.search(r"(for|best|a|some) [a-z ]+? (food|restaurant)|best [a-z]+ in ", ql):
+        return "food type left out of the query"
+    for col, val in re.findall(r"(FOOD_TYPE|STREET_NAME)\s*=\s*['\"]([^'\"]*)['\"]", sql, re.I):
+        table = "RESTAURANT" if col.upper() == "FOOD_TYPE" else "LOCATION"
+        if not conn.execute(f"SELECT 1 FROM {table} WHERE {col} = ? LIMIT 1", (val,)).fetchone():
+            return "value rewritten, not as stored ('afghani' -> 'afghan')"
     if not r["got"] and r["exp"]:
         return "empty result, other reason"
     return "other"
@@ -491,13 +497,13 @@ def make_model_figs(res, by_model, out):
         for p_, v in zip(pos, vals):
             ax[0].text(p_, 71, f"{v:.1f}", ha="center", color="white", fontweight="bold", fontsize=9)
     ax[0].set_xticks(x, NAMES); ax[0].set_ylim(70, 100); ax[0].set_ylabel("accuracy % (axis starts at 70)")
-    ax[0].set_title(f"Accuracy, 95 % CI (solid = {A}, hatched = {B})", fontweight="bold")
+    ax[0].set_title("Accuracy with 95 % CI", fontweight="bold", fontsize=11)
     for k in NAMES:
         ax[1].plot([0, 1], [C[(A, k)]["accuracy"] * 100, C[(B, k)]["accuracy"] * 100], "-o", color=COLORS[k], lw=2.5, label=k)
         ax[1].annotate(f"{C[(B, k)]['accuracy']*100:.1f}", (1, C[(B, k)]["accuracy"] * 100), xytext=(8, 0), textcoords="offset points", va="center")
         ax[1].annotate(f"{C[(A, k)]['accuracy']*100:.1f}", (0, C[(A, k)]["accuracy"] * 100), xytext=(-30, 0), textcoords="offset points", va="center")
     ax[1].set_xticks([0, 1], [A, B]); ax[1].set_xlim(-0.3, 1.3); ax[1].set_ylabel("accuracy %"); ax[1].legend(frameon=False)
-    ax[1].set_title("Interaction plot: does the prompt ranking change with the model?", fontweight="bold")
+    ax[1].set_title("Interaction: does the prompt ranking change with the model?", fontweight="bold", fontsize=11)
     for key, a, title, ylab in [("wall", ax[2], "Mean inference time per question (wall clock)", "seconds"),
                                 ("out_tok", ax[3], "Mean output tokens per question", "tokens")]:
         for mi, m in enumerate((A, B)):
@@ -506,9 +512,10 @@ def make_model_figs(res, by_model, out):
             a.bar(pos, vals, w, color=[COLORS[k] for k in NAMES], alpha=shade[m], hatch="" if m == A else "//", edgecolor="white")
             for p_, v in zip(pos, vals):
                 a.text(p_, v, f"{v:.2f}" if key == "wall" else f"{v:.0f}", ha="center", va="bottom", fontsize=9)
-        a.set_xticks(x, NAMES); a.set_ylabel(ylab); a.set_title(f"{title} (solid = {A}, hatched = {B})", fontweight="bold", fontsize=10)
+        a.set_xticks(x, NAMES); a.set_ylabel(ylab); a.set_title(title, fontweight="bold", fontsize=11)
     for a in ax: a.spines[["top", "right"]].set_visible(False)
-    fig.tight_layout(); fig.savefig(out / "fig6_model_comparison.png", dpi=150); plt.close(fig)
+    fig.suptitle(f"{A} (solid) vs {B} (hatched), effort medium", fontsize=13, fontweight="bold")
+    fig.tight_layout(rect=(0, 0, 1, 0.96)); fig.savefig(out / "fig6_model_comparison.png", dpi=150); plt.close(fig)
 
     # fig7: error causes for all six conditions
     rowsk = [(m, k) for m in (A, B) for k in NAMES]
@@ -525,6 +532,7 @@ def make_model_figs(res, by_model, out):
             if xv >= 2: ax.text(l + xv / 2, yi, str(xv), ha="center", va="center", fontsize=8, color="white", fontweight="bold")
         left += v
     for yi, t in enumerate(left): ax.text(t + 0.3, yi, f"{int(t)}", va="center", fontsize=9)
+    ax.set_xlim(0, left.max() + 2)
     ax.invert_yaxis(); ax.set_xlabel("number of wrong answers (of 155)")
     ax.set_title("Why the answers were wrong, per model and prompt", fontweight="bold")
     ax.legend(frameon=False, fontsize=7.5, loc="center left", bbox_to_anchor=(1.0, 0.5)); ax.spines[["top", "right"]].set_visible(False)

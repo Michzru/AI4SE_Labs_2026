@@ -196,8 +196,11 @@ def make_chart(summary):
                   yerr=errs, capsize=4, ecolor="#444", label=m)
             base = ylim[0] if ylim else 0
             for p_, v in zip(pos, vals):
-                a.annotate(fmt.format(v), (p_, base), xytext=(0, 4), textcoords="offset points", ha="center",
-                           fontsize=8, color="white", fontweight="bold")
+                if v < 0:  # negative bar: label below its end
+                    a.annotate(fmt.format(v), (p_, v), xytext=(0, -12), textcoords="offset points", ha="center", fontsize=8)
+                else:
+                    a.annotate(fmt.format(v), (p_, base), xytext=(0, 4), textcoords="offset points", ha="center",
+                               fontsize=8, color="white", fontweight="bold")
         a.set_xticks(x, names)
         a.set_title(title, fontsize=11, fontweight="bold")
         a.set_ylabel(ylabel + (f" (axis starts at {ylim[0]})" if ylim and ylim[0] > 0 else ""))

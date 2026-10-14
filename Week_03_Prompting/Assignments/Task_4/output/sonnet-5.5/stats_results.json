@@ -399,7 +399,7 @@
       "compound food type split": 1
     },
     "CoT": {
-      "other": 1,
+      "food type left out of the query": 1,
       "city filter on RESTAURANT instead of LOCATION": 7,
       "street name with suffix split (number / '#')": 2,
       "filler word 'food' kept in food type": 1,

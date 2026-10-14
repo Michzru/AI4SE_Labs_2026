@@ -3,8 +3,8 @@
 ## How I did it
 I asked Sonnet 5.5 (in Claude Code) to write one script, `run_task2.py`. The script takes the three prompts from Task 1, and for each of the 155 questions it calls `claude -p` with Sonnet 5.5 (medium effort). Every call is a new, separate session (no history, no tools, no settings), so the prompts do not influence each other. The script measures the inference time and token usage of every call, runs the predicted SQL on the database, compares the returned rows with the labels (same rule as the provided evaluator) and saves everything.
 
-- Model: Sonnet 5.5, effort medium. 155 questions × 3 prompts = 465 calls, one run per prompt, 4 calls in parallel.
-- Outputs (folder `output/sonnet-5.5/`): `predictions_prompt_a|b|c.csv` (predictions with model and prompt metadata, time, tokens, correct/wrong), `raw_*.jsonl` (raw answers), `summary.csv`, `report.md`, `comparison.png`.
+- Model: Sonnet 5.5, effort medium. 155 questions × 3 prompts = 465 calls, one run per prompt, 4 calls in parallel. Later I ran the same 465 calls with a second model, Opus 5.5 (effort medium), see below.
+- Outputs (folders `output/sonnet-5.5/` and `output/opus-5.5/`): `predictions_prompt_a|b|c.csv` (predictions with model and prompt metadata, time, tokens, correct/wrong), `raw_*.jsonl` (raw answers), `summary.csv`, `report.md`, `comparison.png`.
 - Time is the wall clock of the whole CLI call, so it includes the start of the CLI. Cost and prompt tokens depend on what was read from the cache, so I take them only as a rough hint.
 
 ## Results
@@ -33,3 +33,20 @@ Four questions are used as examples inside the Few-Shot prompt. When they are ex
 - **1 question** ("What is the lifes greates illusion?"): nonsense question whose label returns all restaurants, the model returned an empty result. This is a label problem.
 
 So 100 % was probably not reachable, but most of the misses are not caused by bad labels. A possible improvement is to state in the prompt which city column to use and that street names and food types are single literal values. I did not test it, so I do not know how much it would help.
+
+## Second model: Opus 5.5 (effort medium)
+Same prompts, same questions, same script (`run_task2.py --model opus`), outputs in `output/opus-5.5/`. The run was interrupted once by the usage limit of my Claude plan; the failed calls were repeated later, so every question has exactly one valid answer per prompt.
+
+| Prompt | Accuracy | Correct | Invalid SQL | Mean time | P95 time | Mean output tokens | Total cost |
+|---|---|---|---|---|---|---|---|
+| ICIO | 92.9 % | 144/155 | 0 | 4.07 s | 6.18 s | 198 | $2.96 |
+| Few-Shot | **93.5 %** | 145/155 | 0 | **3.87 s** | 6.01 s | **150** | $3.66 |
+| CoT | 87.1 % | 135/155 | 0 | 5.89 s | 9.14 s | 441 | $3.65 |
+
+![comparison opus](output/opus-5.5/comparison.png)
+
+- Opus is better than Sonnet with every prompt, most with ICIO (+4.5 points, 137 → 144 correct). With Opus, ICIO and Few-Shot are almost equal.
+- Opus is slower (about 0.2–0.9 s more per question) and more expensive (about 14–27 % per question).
+- The order Few-Shot ≥ ICIO > CoT stays the same. CoT is again the slowest and least accurate.
+- The statistical comparison of the two models is in Task 4.
+

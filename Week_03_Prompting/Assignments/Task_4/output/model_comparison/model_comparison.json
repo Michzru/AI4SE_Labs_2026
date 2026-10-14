@@ -1,0 +1,402 @@
+{
+  "models": [
+    "Sonnet 5.5",
+    "Opus 5.5"
+  ],
+  "per_prompt": {},
+  "interaction": [
+    {
+      "pair": "ICIO - Few-Shot",
+      "gap_A": -0.04516129032258064,
+      "gap_B": -0.0064516129032258064,
+      "change": 0.03870967741935484,
+      "ci_lo": -0.012903225806451613,
+      "ci_hi": 0.09032258064516129
+    },
+    {
+      "pair": "ICIO - CoT",
+      "gap_A": 0.03225806451612903,
+      "gap_B": 0.05806451612903226,
+      "change": 0.025806451612903226,
+      "ci_lo": -0.03225806451612903,
+      "ci_hi": 0.08387096774193549
+    },
+    {
+      "pair": "Few-Shot - CoT",
+      "gap_A": 0.07741935483870968,
+      "gap_B": 0.06451612903225806,
+      "change": -0.012903225806451613,
+      "ci_lo": -0.07096774193548387,
+      "ci_hi": 0.04516129032258064
+    }
+  ],
+  "agreement": {
+    "ICIO": {
+      "both": 132,
+      "only Sonnet 5.5": 5,
+      "only Opus 5.5": 12,
+      "neither": 6
+    },
+    "Few-Shot": {
+      "both": 140,
+      "only Sonnet 5.5": 4,
+      "only Opus 5.5": 5,
+      "neither": 6
+    },
+    "CoT": {
+      "both": 124,
+      "only Sonnet 5.5": 8,
+      "only Opus 5.5": 11,
+      "neither": 12
+    }
+  },
+  "conditions": [
+    {
+      "model": "Sonnet 5.5",
+      "prompt": "ICIO",
+      "accuracy": 0.8838709677419355,
+      "ci_lo": 0.832258064516129,
+      "ci_hi": 0.9354838709677419,
+      "correct": 137,
+      "f1": 0.9206196427060652,
+      "wall": 3.9066967741935485,
+      "api": 2.398490322580645,
+      "out_tok": 207.18064516129033,
+      "cost": 0.01601322064516129,
+      "cochran_p": 0.0006984362386618607
+    },
+    {
+      "model": "Sonnet 5.5",
+      "prompt": "Few-Shot",
+      "accuracy": 0.9290322580645162,
+      "ci_lo": 0.8838709677419355,
+      "ci_hi": 0.967741935483871,
+      "correct": 144,
+      "f1": 0.9657809330286459,
+      "wall": 3.604367741935483,
+      "api": 2.2055290322580645,
+      "out_tok": 144.71612903225807,
+      "cost": 0.018630112258064515,
+      "cochran_p": 0.0006984362386618607
+    },
+    {
+      "model": "Sonnet 5.5",
+      "prompt": "CoT",
+      "accuracy": 0.8516129032258064,
+      "ci_lo": 0.7935483870967742,
+      "ci_hi": 0.9032258064516129,
+      "correct": 132,
+      "f1": 0.8948189604575191,
+      "wall": 4.951858064516129,
+      "api": 3.4198322580645164,
+      "out_tok": 400.63870967741934,
+      "cost": 0.020709936774193548,
+      "cochran_p": 0.0006984362386618607
+    },
+    {
+      "model": "Opus 5.5",
+      "prompt": "ICIO",
+      "accuracy": 0.9290322580645162,
+      "ci_lo": 0.8838709677419355,
+      "ci_hi": 0.967741935483871,
+      "correct": 144,
+      "f1": 0.9322695035460994,
+      "wall": 4.065135483870968,
+      "api": 3.7262258064516125,
+      "out_tok": 198.18064516129033,
+      "cost": 0.019065272258064515,
+      "cochran_p": 0.022557973880056065
+    },
+    {
+      "model": "Opus 5.5",
+      "prompt": "Few-Shot",
+      "accuracy": 0.9354838709677419,
+      "ci_lo": 0.896774193548387,
+      "ci_hi": 0.9741935483870968,
+      "correct": 145,
+      "f1": 0.9594546062666859,
+      "wall": 3.8689935483870963,
+      "api": 3.443445161290322,
+      "out_tok": 150.34193548387097,
+      "cost": 0.023633415483870965,
+      "cochran_p": 0.022557973880056065
+    },
+    {
+      "model": "Opus 5.5",
+      "prompt": "CoT",
+      "accuracy": 0.8709677419354839,
+      "ci_lo": 0.8193548387096774,
+      "ci_hi": 0.9225806451612903,
+      "correct": 135,
+      "f1": 0.8800975560701024,
+      "wall": 5.894154838709678,
+      "api": 5.658600000000001,
+      "out_tok": 441.2451612903226,
+      "cost": 0.02352170193548387,
+      "cochran_p": 0.022557973880056065
+    }
+  ],
+  "accuracy_tests": [
+    {
+      "prompt": "ICIO",
+      "only_B": 12,
+      "only_A": 5,
+      "diff": 0.04516129032258064,
+      "ci_lo": -0.0064516129032258064,
+      "ci_hi": 0.0967741935483871,
+      "p": 0.143463134765625,
+      "p_holm": 0.430389404296875
+    },
+    {
+      "prompt": "Few-Shot",
+      "only_B": 5,
+      "only_A": 4,
+      "diff": 0.0064516129032258064,
+      "ci_lo": -0.03225806451612903,
+      "ci_hi": 0.04516129032258064,
+      "p": 1.0,
+      "p_holm": 1.0
+    },
+    {
+      "prompt": "CoT",
+      "only_B": 11,
+      "only_A": 8,
+      "diff": 0.01935483870967742,
+      "ci_lo": -0.03225806451612903,
+      "ci_hi": 0.07096774193548387,
+      "p": 0.6476058959960938,
+      "p_holm": 1.0
+    }
+  ],
+  "metric_tests": {
+    "row-F1": [
+      {
+        "prompt": "ICIO",
+        "mean_A": 0.9206196427060652,
+        "mean_B": 0.9322695035460994,
+        "diff": 0.011649860840034013,
+        "ci_lo": -0.0306680878779147,
+        "ci_hi": 0.05351195744871105,
+        "p": 0.2963990411447742,
+        "p_holm": 0.8891971234343227
+      },
+      {
+        "prompt": "Few-Shot",
+        "mean_A": 0.9657809330286459,
+        "mean_B": 0.9594546062666859,
+        "diff": -0.006326326761960039,
+        "ci_lo": -0.03864662548615878,
+        "ci_hi": 0.025971911627424543,
+        "p": 1.0,
+        "p_holm": 1.0
+      },
+      {
+        "prompt": "CoT",
+        "mean_A": 0.8948189604575191,
+        "mean_B": 0.8800975560701024,
+        "diff": -0.01472140438741675,
+        "ci_lo": -0.058062555574308373,
+        "ci_hi": 0.029127385837470723,
+        "p": 0.9098739989799247,
+        "p_holm": 1.0
+      }
+    ],
+    "wall time (s)": [
+      {
+        "prompt": "ICIO",
+        "mean_A": 3.9066967741935485,
+        "mean_B": 4.065135483870968,
+        "diff": 0.15843870967741935,
+        "ci_lo": -0.04311387096774191,
+        "ci_hi": 0.3498656451612904,
+        "p": 0.0007414754394327772,
+        "p_holm": 0.0007414754394327772
+      },
+      {
+        "prompt": "Few-Shot",
+        "mean_A": 3.604367741935483,
+        "mean_B": 3.8689935483870963,
+        "diff": 0.26462580645161293,
+        "ci_lo": 0.05600854838709681,
+        "ci_hi": 0.4651243548387096,
+        "p": 6.573671831723524e-07,
+        "p_holm": 1.3147343663447047e-06
+      },
+      {
+        "prompt": "CoT",
+        "mean_A": 4.951858064516129,
+        "mean_B": 5.894154838709678,
+        "diff": 0.9422967741935485,
+        "ci_lo": 0.6740312903225806,
+        "ci_hi": 1.2225567741935481,
+        "p": 2.7888545307243327e-11,
+        "p_holm": 8.366563592172998e-11
+      }
+    ],
+    "API time (s)": [
+      {
+        "prompt": "ICIO",
+        "mean_A": 2.398490322580645,
+        "mean_B": 3.7262258064516125,
+        "diff": 1.3277354838709678,
+        "ci_lo": 1.188792258064516,
+        "ci_hi": 1.471065322580645,
+        "p": 2.075100366175415e-25,
+        "p_holm": 4.15020073235083e-25
+      },
+      {
+        "prompt": "Few-Shot",
+        "mean_A": 2.2055290322580645,
+        "mean_B": 3.443445161290322,
+        "diff": 1.2379161290322582,
+        "ci_lo": 1.0975087096774192,
+        "ci_hi": 1.387645322580645,
+        "p": 1.0541818846955058e-23,
+        "p_holm": 1.0541818846955058e-23
+      },
+      {
+        "prompt": "CoT",
+        "mean_A": 3.4198322580645164,
+        "mean_B": 5.658600000000001,
+        "diff": 2.2387677419354834,
+        "ci_lo": 1.9880809677419355,
+        "ci_hi": 2.4967809677419353,
+        "p": 5.967624759030031e-26,
+        "p_holm": 1.7902874277090092e-25
+      }
+    ],
+    "output tokens": [
+      {
+        "prompt": "ICIO",
+        "mean_A": 207.18064516129033,
+        "mean_B": 198.18064516129033,
+        "diff": -9.0,
+        "ci_lo": -24.664677419354838,
+        "ci_hi": 5.8390322580645115,
+        "p": 0.4286758204320352,
+        "p_holm": 0.4286758204320352
+      },
+      {
+        "prompt": "Few-Shot",
+        "mean_A": 144.71612903225807,
+        "mean_B": 150.34193548387097,
+        "diff": 5.625806451612903,
+        "ci_lo": -3.064838709677419,
+        "ci_hi": 13.238870967741933,
+        "p": 0.0218502573017628,
+        "p_holm": 0.06555077190528841
+      },
+      {
+        "prompt": "CoT",
+        "mean_A": 400.63870967741934,
+        "mean_B": 441.2451612903226,
+        "diff": 40.60645161290323,
+        "ci_lo": 19.664354838709677,
+        "ci_hi": 62.593709677419355,
+        "p": 0.09040224124000873,
+        "p_holm": 0.18080448248001746
+      }
+    ],
+    "cost (USD)": [
+      {
+        "prompt": "ICIO",
+        "mean_A": 0.01601322064516129,
+        "mean_B": 0.019065272258064515,
+        "diff": 0.0030520516129032256,
+        "ci_lo": 0.0022305369677419347,
+        "ci_hi": 0.0038981261935483874,
+        "p": 7.168975733113853e-11,
+        "p_holm": 1.4337951466227706e-10
+      },
+      {
+        "prompt": "Few-Shot",
+        "mean_A": 0.018630112258064515,
+        "mean_B": 0.023633415483870965,
+        "diff": 0.005003303225806451,
+        "ci_lo": 0.0036977847419354835,
+        "ci_hi": 0.006785152387096773,
+        "p": 3.094997084772584e-17,
+        "p_holm": 9.284991254317751e-17
+      },
+      {
+        "prompt": "CoT",
+        "mean_A": 0.020709936774193548,
+        "mean_B": 0.02352170193548387,
+        "diff": 0.0028117651612903226,
+        "ci_lo": 0.0002448527419354835,
+        "ci_hi": 0.005464042612903226,
+        "p": 1.5925684685028013e-07,
+        "p_holm": 1.5925684685028013e-07
+      }
+    ]
+  },
+  "cochran_6": {
+    "Q": 20.109170305676855,
+    "df": 5,
+    "p": 0.0011921263544818332
+  },
+  "causes": {
+    "Sonnet 5.5": {
+      "ICIO": {
+        "city filter on RESTAURANT instead of LOCATION": 7,
+        "street name with suffix split (number / '#')": 3,
+        "filler word 'food' kept in food type": 2,
+        "nonsense question / label": 1,
+        "region treated as a city / region ignored": 1,
+        "region value not as stored ('sacramento' vs 'sacramento area')": 3,
+        "compound food type split": 1
+      },
+      "Few-Shot": {
+        "city filter on RESTAURANT instead of LOCATION": 7,
+        "street name with suffix split (number / '#')": 1,
+        "nonsense question / label": 1,
+        "region value not as stored ('sacramento' vs 'sacramento area')": 1,
+        "compound food type split": 1
+      },
+      "CoT": {
+        "food type left out of the query": 1,
+        "city filter on RESTAURANT instead of LOCATION": 7,
+        "street name with suffix split (number / '#')": 2,
+        "filler word 'food' kept in food type": 1,
+        "nonsense question / label": 1,
+        "region value not as stored ('sacramento' vs 'sacramento area')": 2,
+        "region treated as a city / region ignored": 5,
+        "region joined through LOCATION city": 2,
+        "added 'best' (MAX) that was not asked": 1,
+        "compound food type split": 1
+      }
+    },
+    "Opus 5.5": {
+      "ICIO": {
+        "food type left out of the query": 2,
+        "empty result, other reason": 1,
+        "street name with suffix split (number / '#')": 2,
+        "value rewritten, not as stored ('afghani' -> 'afghan')": 1,
+        "filler word 'food' kept in food type": 1,
+        "nonsense question / label": 1,
+        "region treated as a city / region ignored": 2,
+        "region joined through LOCATION city": 1
+      },
+      "Few-Shot": {
+        "city filter on RESTAURANT instead of LOCATION": 5,
+        "empty result, other reason": 1,
+        "filler word 'food' kept in food type": 1,
+        "nonsense question / label": 1,
+        "food type left out of the query": 1,
+        "other": 1
+      },
+      "CoT": {
+        "food type left out of the query": 4,
+        "empty result, other reason": 2,
+        "city filter on RESTAURANT instead of LOCATION": 1,
+        "street name with suffix split (number / '#')": 2,
+        "value rewritten, not as stored ('afghani' -> 'afghan')": 3,
+        "nonsense question / label": 1,
+        "region treated as a city / region ignored": 4,
+        "region value not as stored ('sacramento' vs 'sacramento area')": 1,
+        "filler word 'food' kept in food type": 1,
+        "compound food type split": 1
+      }
+    }
+  }
+}
