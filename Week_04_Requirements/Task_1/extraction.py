@@ -37,5 +37,13 @@ class ExtractionResult(BaseModel):
     requirements: list[Requirement]
 
 
-def build_user_message(doc_id: str, index: int, total: int, text: str) -> str:
-    return f"Document: {doc_id} (fragment {index + 1} of {total})\n\n---\n{text}\n---"
+def build_user_message(doc_id: str, index: int, total: int, text: str,
+                       feedback: Optional[str] = None) -> str:
+    message = f"Document: {doc_id} (fragment {index + 1} of {total})\n\n---\n{text}\n---"
+    if feedback:
+        message += (
+            "\n\nA reviewer found that an earlier extraction of this document missed the "
+            "requirements below. Extract ONLY requirements matching these descriptions that are "
+            "present in this fragment; if none is present, return an empty list.\n" + feedback
+        )
+    return message

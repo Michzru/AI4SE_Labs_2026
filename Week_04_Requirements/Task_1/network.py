@@ -13,10 +13,12 @@ from langgraph.types import Send
 from openai import OpenAI
 
 from extraction import EXTRACTOR_PROMPT, ExtractionResult, build_user_message
+from review import REVIEWER_PROMPT, ReviewResult, build_review_message
 
 TEXT_SUFFIXES = {".txt", ".eml", ".md"}
 DEFAULT_MAX_CHUNK_CHARS = 4000
-MODELS = {"extract": "gpt-5.6-luna"}
+MODELS = {"extract": "gpt-5.6-luna", "review": "gpt-6-luna"}
+MAX_REEXTRACTIONS = 2  # feedback-loop cap
 MAX_CONCURRENCY = 8  # parallel LLM calls
 
 # Split points, strongest first: separator lines (=== / ---), blank lines, line breaks, spaces.
@@ -60,6 +62,10 @@ class State(TypedDict, total=False):
     # `extract` runs once per chunk in parallel; the reducer (operator.add) concatenates the results.
     raw_candidates: Annotated[list[dict], operator.add]
     candidates: list[Candidate]
+    # feedback loop: `iteration` = reviews finished so far; `feedback` maps doc_id -> missing items text
+    iteration: int
+    reviews: Annotated[list[dict], operator.add]
+    feedback: dict[str, str]
 
 
 def load_corpus(state: State) -> dict:
@@ -131,6 +137,23 @@ def fan_out(state: State) -> list[Send]:
     return [Send("extract", {"chunk": chunk}) for chunk in state["chunks"]]
 
 
+def fan_out_feedback(state: State) -> list[Send]:
+    """Re-extraction round: only chunks of documents the reviewer complained about, with the feedback."""
+    return [Send("extract", {"chunk": chunk, "feedback": state["feedback"][chunk["doc_id"]]})
+            for chunk in state["chunks"] if chunk["doc_id"] in state["feedback"]]
+
+
+def fan_out_review(state: State) -> list[Send]:
+    """Conditional edge: one parallel review task per document."""
+    round_ = state.get("iteration", 0)
+    docs = {d["id"]: d for d in state["documents"]}
+    return [Send("review_completeness", {
+        "doc": doc,
+        "candidates": [c for c in state["candidates"] if c["source_doc"] == doc_id],
+        "round": round_,
+    }) for doc_id, doc in docs.items()]
+
+
 _client: OpenAI | None = None
 
 
@@ -149,7 +172,8 @@ def extract(task: dict) -> dict:
         messages=[
             {"role": "system", "content": EXTRACTOR_PROMPT},
             {"role": "user", "content": build_user_message(
-                chunk["doc_id"], chunk["index"], chunk["total"], chunk["text"])},
+                chunk["doc_id"], chunk["index"], chunk["total"], chunk["text"],
+                task.get("feedback"))},
         ],
         response_format=ExtractionResult,
         max_completion_tokens=16000,
@@ -193,44 +217,113 @@ def verify_evidence(state: State) -> dict:
     return {"candidates": candidates}
 
 
+def review_completeness(task: dict) -> dict:
+    """LLM node: given a document and its candidates, list requirements the extraction missed."""
+    doc, candidates = task["doc"], task["candidates"]
+    extracted = [f"{c['title']}: {c['description']}" for c in candidates]
+    resp = get_client().chat.completions.parse(
+        model=MODELS["review"],
+        messages=[
+            {"role": "system", "content": REVIEWER_PROMPT},
+            {"role": "user", "content": build_review_message(doc["id"], doc["text"], extracted)},
+        ],
+        response_format=ReviewResult,
+        max_completion_tokens=16000,
+    )
+    parsed = resp.choices[0].message.parsed
+    text = squash(doc["text"])
+    missing = [
+        {"description": m.description, "evidence": m.evidence,
+         "quote_ok": bool(squash(m.evidence)) and squash(m.evidence) in text}
+        for m in (parsed.missing if parsed else [])
+    ]
+    return {"reviews": [{"doc_id": doc["id"], "round": task["round"], "missing": missing}]}
+
+
+def review_gate(state: State) -> dict:
+    """Deterministic node: join the parallel reviews and decide whether another extraction round runs.
+
+    Reviewer items whose quote is not in the document are ignored (hallucination guard).
+    """
+    done = state.get("iteration", 0)
+    feedback = {}
+    for review in state["reviews"]:
+        if review["round"] != done:
+            continue
+        items = [m["description"] for m in review["missing"] if m["quote_ok"]]
+        if items:
+            feedback[review["doc_id"]] = "\n".join(f"- {item}" for item in items)
+    return {"iteration": done + 1, "feedback": feedback if done < MAX_REEXTRACTIONS else {}}
+
+
 # Pipeline order; also the names of the checkpoint files (output/states/NN_<name>.json).
-STAGES = ["load_corpus", "chunk_documents", "extract", "verify_evidence"]
+# review_gate may loop back to extract: the loop is wired in build_graph.
+STAGES = ["load_corpus", "chunk_documents", "extract", "verify_evidence",
+          "review_completeness", "review_gate"]
 NODES = {
     "load_corpus": load_corpus,
     "chunk_documents": chunk_documents,
     "extract": extract,
     "verify_evidence": verify_evidence,
+    "review_completeness": review_completeness,
+    "review_gate": review_gate,
 }
+FAN_OUT = {"extract": fan_out, "review_completeness": fan_out_review}
 
 
 def build_graph(start_at: str = STAGES[0], stop_after: str = STAGES[-1]):
     """Compile the graph for the stages start_at..stop_after (lets us resume from a checkpoint)."""
     stages = STAGES[STAGES.index(start_at):STAGES.index(stop_after) + 1]
+    looped = "review_gate" in stages  # the feedback loop needs these nodes even when resuming mid-loop
+    nodes = set(stages) | ({"extract", "verify_evidence", "review_completeness"} if looped else set())
     graph = StateGraph(State)
-    previous = START
-    for name in stages:
-        graph.add_node(name, NODES[name])
-        if name == "extract":
-            graph.add_conditional_edges(previous, fan_out, ["extract"])
+    for name in STAGES:
+        if name in nodes:
+            graph.add_node(name, NODES[name])
+
+    def link(source, target):
+        if target in FAN_OUT:
+            graph.add_conditional_edges(source, FAN_OUT[target], [target])
         else:
-            graph.add_edge(previous, name)
-        previous = name
-    graph.add_edge(previous, END)
+            graph.add_edge(source, target)
+
+    for source, target in zip([START] + stages, stages):
+        link(source, target)
+    if looped:
+        if "extract" not in stages:  # resumed after extract: reachable only through the loop
+            graph.add_edge("extract", "verify_evidence")
+        if "verify_evidence" not in stages:
+            link("verify_evidence", "review_completeness")
+        after = stages[stages.index("review_gate") + 1:]
+        target = after[0] if after else END
+
+        def route(state: State):
+            return fan_out_feedback(state) if state.get("feedback") else target
+
+        graph.add_conditional_edges("review_gate", route, ["extract", target])
+    if stages[-1] != "review_gate":
+        graph.add_edge(stages[-1], END)
     return graph.compile()
 
 
-def snapshot_path(output_dir: Path, stage: str) -> Path:
-    return output_dir / "states" / f"{STAGES.index(stage) + 1:02d}_{stage}.json"
+def snapshot_path(output_dir: Path, stage: str, iteration: int = 0) -> Path:
+    """Checkpoint file; later passes of the feedback loop get an .iN suffix so the first pass stays."""
+    suffix = f".i{iteration}" if iteration else ""
+    return output_dir / "states" / f"{STAGES.index(stage) + 1:02d}_{stage}{suffix}.json"
 
 
 def save_snapshot(output_dir: Path, stage: str, state: dict) -> None:
-    path = snapshot_path(output_dir, stage)
+    path = snapshot_path(output_dir, stage, state.get("iteration", 0))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-def load_snapshot(output_dir: Path, stage: str) -> dict:
-    return json.loads(snapshot_path(output_dir, stage).read_text(encoding="utf-8"))
+def load_snapshot(output_dir: Path, stage: str, iteration: int | None = None) -> dict:
+    """Load a checkpoint: the given loop pass, or the latest one if iteration is None."""
+    if iteration is None:
+        iteration = max((i for i in range(MAX_REEXTRACTIONS + 2)
+                         if snapshot_path(output_dir, stage, i).exists()), default=0)
+    return json.loads(snapshot_path(output_dir, stage, iteration).read_text(encoding="utf-8"))
 
 
 def summarize(stage: str, state: dict) -> str:
@@ -238,6 +331,11 @@ def summarize(stage: str, state: dict) -> str:
     text = ", ".join(f"{n} {k}" for k, n in counts.items())
     if "candidates" in state:
         text += f" ({sum(not c['evidence_ok'] for c in state['candidates'])} with unverified quote)"
+    if state.get("reviews"):
+        latest = max(r["round"] for r in state["reviews"])
+        missing = [m for r in state["reviews"] if r["round"] == latest for m in r["missing"]]
+        text += (f"; review round {latest}: {sum(m['quote_ok'] for m in missing)} missing "
+                 f"({len(missing)} reported)")
     return f"[{stage}] {text}"
 
 
@@ -249,6 +347,8 @@ def main():
     parser.add_argument("--output-dir", default="output", help="where checkpoints and the result go")
     parser.add_argument("--start-at", choices=STAGES, default=STAGES[0],
                         help="resume: load the checkpoint of the previous stage and run from this stage")
+    parser.add_argument("--snapshot-iteration", type=int, default=None,
+                        help="with --start-at: use the checkpoint of this loop pass (default: latest)")
     parser.add_argument("--stop-after", choices=STAGES, default=STAGES[-1],
                         help="stop after this stage")
     args = parser.parse_args()
@@ -258,7 +358,7 @@ def main():
     if args.start_at == STAGES[0]:
         state = {"input_dir": args.input_dir, "max_chunk_chars": args.max_chunk_chars}
     else:
-        state = load_snapshot(output_dir, STAGES[STAGES.index(args.start_at) - 1])
+        state = load_snapshot(output_dir, STAGES[STAGES.index(args.start_at) - 1], args.snapshot_iteration)
 
     graph = build_graph(args.start_at, args.stop_after)
     stage = None
