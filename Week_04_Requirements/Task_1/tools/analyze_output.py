@@ -1,15 +1,17 @@
-"""Quality analysis of a finished run (run: python analyze_output.py output/states). Code only, no API calls.
+"""Quality analysis of a finished run (run: python tools/analyze_output.py output/states). Code only, no API calls.
 
 Reads the last checkpoint (render_doc input = assign_ids) and the rendered document and prints metrics
 per output spec (OS1-OS9), plus near-duplicate pairs and vocabulary variants for manual review.
 """
 import argparse
+import sys
+from pathlib import Path
 import json
 import re
 from collections import Counter
 from itertools import combinations
-from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # modules live one level up
 from merge import cosine, tfidf_vectors
 from render import check_document
 

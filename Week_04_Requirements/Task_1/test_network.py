@@ -1,4 +1,4 @@
-"""Offline tests of the deterministic nodes (run: python -m unittest test_step1 -v)."""
+"""Offline tests of the deterministic nodes (run: python -m unittest test_network -v)."""
 import unittest
 
 from network import build_graph, squash, verify_evidence

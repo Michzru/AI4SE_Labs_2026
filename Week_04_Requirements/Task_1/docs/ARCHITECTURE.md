@@ -5,6 +5,10 @@ Output: one Markdown document with requirements, a blacklist and a priority scal
 
 ## Graph
 
+![Network diagram](graph.png)
+
+Same graph as a Mermaid diagram (the picture above is drawn by `docs/draw_graph.py`):
+
 ```mermaid
 flowchart TD
     START([START]) --> A[load_corpus<br/><i>code</i>]
@@ -42,7 +46,7 @@ Legend: *code* = deterministic node, **LLM** = agentic node.
 | 8 | `assign_ids` | code | requirements, blacklist -> with `REQ-001` / `BL-001` | IDs assigned after dedup, never by an LLM; ordering by date |
 | 9 | `render_doc` | code | final state -> `.md` | also self-checks: every requirement has id, name, paragraph, priority, sources |
 
-Models: 3 distinct (`gpt-5.6-luna`: extract + paragraphs, `gpt-6-luna`: review + merge, `gpt-5.4-nano`: prioritize + names). Chosen from `benchmark_extract.py`
+Models: 3 distinct (`gpt-5.6-luna`: extract + paragraphs, `gpt-6-luna`: review + merge, `gpt-5.4-nano`: prioritize + names). Chosen from `tools/benchmark_extract.py`
 (recall on dense text, verbatim citations, speed).
 
 ## State (LangGraph `State`)

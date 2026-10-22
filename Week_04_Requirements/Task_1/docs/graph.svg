@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 1360" width="820" height="1360" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b3402a"/></marker></defs>
+<rect width="820" height="1360" fill="#ffffff"/>
+<text x="30" y="38" font-size="22" font-weight="bold" fill="#222">Requirements refinement network (LangGraph)</text>
+<rect x="30" y="58" width="22" height="16" rx="3" fill="#e8eef7" stroke="#5b7aa6" stroke-width="1.5"/><text x="60" y="71" font-size="13" fill="#333">deterministic node (code)</text>
+<rect x="290" y="58" width="22" height="16" rx="3" fill="#fff1d6" stroke="#d08a1c" stroke-width="1.5"/><text x="320" y="71" font-size="13" fill="#333">agentic node (LLM call)</text>
+<line x1="530" y1="66" x2="570" y2="66" stroke="#b3402a" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#r)"/><text x="578" y="71" font-size="13" fill="#333">feedback loop</text>
+<rect x="270" y="122" width="120" height="32" rx="16" fill="#2b2b2b"/><text x="330" y="144" font-size="14" fill="#fff" text-anchor="middle" font-weight="bold">START</text>
+<rect x="140" y="192" width="380" height="56" rx="9" fill="#e8eef7" stroke="#5b7aa6" stroke-width="2"/>
+<text x="330" y="215" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">load_corpus</text><text x="330" y="235" font-size="12" fill="#444" text-anchor="middle">read all .txt / .eml / .md recursively</text>
+<line x1="330" y1="154" x2="330" y2="190" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="274" width="380" height="56" rx="9" fill="#e8eef7" stroke="#5b7aa6" stroke-width="2"/>
+<text x="330" y="297" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">chunk_documents</text><text x="330" y="317" font-size="12" fill="#444" text-anchor="middle">lossless split, max 4000 characters</text>
+<line x1="330" y1="248" x2="330" y2="272" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="356" width="380" height="56" rx="9" fill="#fff1d6" stroke="#d08a1c" stroke-width="2"/>
+<text x="330" y="379" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">extract  ·  gpt-5.6-luna</text><text x="330" y="399" font-size="12" fill="#444" text-anchor="middle">parallel: one call per chunk (Send)</text>
+<line x1="330" y1="330" x2="330" y2="354" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="438" width="380" height="56" rx="9" fill="#e8eef7" stroke="#5b7aa6" stroke-width="2"/>
+<text x="330" y="461" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">verify_evidence</text><text x="330" y="481" font-size="12" fill="#444" text-anchor="middle">quote check, candidate ids, source_doc</text>
+<line x1="330" y1="412" x2="330" y2="436" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="520" width="380" height="56" rx="9" fill="#fff1d6" stroke="#d08a1c" stroke-width="2"/>
+<text x="330" y="543" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">review_completeness  ·  gpt-6-luna</text><text x="330" y="563" font-size="12" fill="#444" text-anchor="middle">parallel: one call per document</text>
+<line x1="330" y1="494" x2="330" y2="518" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="602" width="380" height="56" rx="9" fill="#e8eef7" stroke="#5b7aa6" stroke-width="2"/>
+<text x="330" y="625" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">review_gate</text><text x="330" y="645" font-size="12" fill="#444" text-anchor="middle">join reviews, decide whether to loop</text>
+<line x1="330" y1="576" x2="330" y2="600" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="684" width="380" height="56" rx="9" fill="#fff1d6" stroke="#d08a1c" stroke-width="2"/>
+<text x="330" y="707" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">merge_and_resolve  ·  gpt-6-luna</text><text x="330" y="727" font-size="12" fill="#444" text-anchor="middle">topic clusters, 2 rounds: duplicates, conflicts, blacklist</text>
+<line x1="330" y1="658" x2="330" y2="682" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="766" width="380" height="56" rx="9" fill="#fff1d6" stroke="#d08a1c" stroke-width="2"/>
+<text x="330" y="789" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">prioritize  ·  gpt-5.4-nano</text><text x="330" y="809" font-size="12" fill="#444" text-anchor="middle">code baseline from signals, model moves it by &lt;= 1 level</text>
+<line x1="330" y1="740" x2="330" y2="764" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="848" width="380" height="56" rx="9" fill="#e8eef7" stroke="#5b7aa6" stroke-width="2"/>
+<text x="330" y="871" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">retrieve_context</text><text x="330" y="891" font-size="12" fill="#444" text-anchor="middle">source passages found by quote anchoring</text>
+<line x1="330" y1="822" x2="330" y2="846" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="930" width="380" height="56" rx="9" fill="#fff1d6" stroke="#d08a1c" stroke-width="2"/>
+<text x="330" y="953" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">write_paragraphs  ·  gpt-5.6-luna</text><text x="330" y="973" font-size="12" fill="#444" text-anchor="middle">paragraph grounded in the passages, guarded</text>
+<line x1="330" y1="904" x2="330" y2="928" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="1012" width="380" height="56" rx="9" fill="#fff1d6" stroke="#d08a1c" stroke-width="2"/>
+<text x="330" y="1035" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">name_requirements  ·  gpt-5.4-nano</text><text x="330" y="1055" font-size="12" fill="#444" text-anchor="middle">short descriptive name</text>
+<line x1="330" y1="986" x2="330" y2="1010" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="1094" width="380" height="56" rx="9" fill="#e8eef7" stroke="#5b7aa6" stroke-width="2"/>
+<text x="330" y="1117" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">assign_ids</text><text x="330" y="1137" font-size="12" fill="#444" text-anchor="middle">REQ- / BL- ids, ordering by priority and date</text>
+<line x1="330" y1="1068" x2="330" y2="1092" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="140" y="1176" width="380" height="56" rx="9" fill="#e8eef7" stroke="#5b7aa6" stroke-width="2"/>
+<text x="330" y="1199" font-size="15" font-weight="bold" fill="#222" text-anchor="middle">render_doc</text><text x="330" y="1219" font-size="12" fill="#444" text-anchor="middle">Markdown document + spec self-check</text>
+<line x1="330" y1="1150" x2="330" y2="1174" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<rect x="270" y="1270" width="120" height="32" rx="16" fill="#2b2b2b"/><text x="330" y="1292" font-size="14" fill="#fff" text-anchor="middle" font-weight="bold">END</text>
+<line x1="330" y1="1232" x2="330" y2="1268" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M520,630 H590 V384 H522" fill="none" stroke="#b3402a" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#r)"/>
+<text x="600" y="493" font-size="12" fill="#b3402a">missing items found</text><text x="600" y="507" font-size="12" fill="#b3402a">and round &lt; 2:</text><text x="600" y="521" font-size="12" fill="#b3402a">re-extract only the</text><text x="600" y="535" font-size="12" fill="#b3402a">affected documents</text>
+<text x="600" y="654" font-size="12" fill="#555">otherwise: continue</text>
+</svg>

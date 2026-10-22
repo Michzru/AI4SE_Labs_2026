@@ -1,5 +1,7 @@
-"""Compare models on the requirement-extraction step (run: python benchmark_extract.py data/corpus)."""
+"""Compare models on the requirement-extraction step (run: python tools/benchmark_extract.py data/corpus)."""
 import argparse
+import sys
+from pathlib import Path
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -7,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dotenv import find_dotenv, load_dotenv
 from openai import OpenAI
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # modules live one level up
 from extraction import EXTRACTOR_PROMPT, ExtractionResult, build_user_message
 from network import build_graph
 

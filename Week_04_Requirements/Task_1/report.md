@@ -83,7 +83,7 @@ We try to be efficient and to save already processd node to get it faster and mo
    First output: 446 requirements, 25 blacklisted, 264 kB. Some duplicates by name remain (e.g. "Control Access
    Through Roles" twice, "Provide Online Help" next to "Provide Navigable Online Help"); to be assessed in the full run.
 
-6. Full clean run and analysis (`python network.py data/corpus`, no checkpoints; `python analyze_output.py output/states`,
+6. Full clean run and analysis (`python network.py data/corpus`, no checkpoints; `python tools/analyze_output.py output/states`,
    code only, no API calls; the printout is in `output/analysis.txt`, the document is `output/requirements.md`).
    Runtime about 5.5 minutes. Pipeline: 20 documents -> 55 chunks -> 836 candidates -> 453 requirements + 22 blacklisted.
    Two complete runs gave 446 and 453 requirements, so the output is stable in size but not identical (non-deterministic LLM).
@@ -136,6 +136,8 @@ We try to be efficient and to save already processd node to get it faster and mo
 # Final result
 
 ## Network
+
+![Network diagram](docs/graph.png)
 
 | # | Node | Type | Model |
 |---|---|---|---|
