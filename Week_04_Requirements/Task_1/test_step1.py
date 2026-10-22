@@ -285,3 +285,16 @@ class ElaborationTest(unittest.TestCase):
         finally:
             network.write_batch, network.name_batch = old
         self.assertEqual([r["title"] for r in named], ["Report Missing Transit Items", "Report Missing Items"])
+
+
+class LongParagraphTest(unittest.TestCase):
+    def test_long_list_is_windowed_around_the_quote(self):
+        from context import MAX_CHARS, index_documents, retrieve
+        lines = ["ITEMS REPORTS:"] + [f"- Filler report number {i} with some padding words" for i in range(60)]
+        lines[45] = "- Unique Needle Report about missing things"
+        docs = index_documents([{"id": "d", "text": "\n".join(lines) + "\n"}])
+        req = {"title": "t", "description": "d", "sources": ["d"],
+               "evidence": [{"source_doc": "d", "quote": "Unique Needle Report about missing things", "verified": True}]}
+        text = retrieve(req, docs)[0]["text"]
+        self.assertIn("Unique Needle Report", text)
+        self.assertTrue(text.startswith("ITEMS REPORTS:") and len(text) <= MAX_CHARS)
