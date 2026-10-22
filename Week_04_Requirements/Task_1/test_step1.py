@@ -237,3 +237,51 @@ class RenderTest(unittest.TestCase):
         broken = [{**reqs[0], "priority": "Urgent", "sources": []}] + reqs[1:]
         problems = check_document(md, broken, bl)
         self.assertTrue(any("OS6" in p for p in problems) and any("OS4" in p for p in problems))
+
+
+class ElaborationTest(unittest.TestCase):
+    DOC = ("Intro paragraph about nothing.\n\nStaff need a report of all items that went missing during\n"
+           "transit, because 3 branches lost items last year.\n\nUnrelated closing remarks.\n")
+
+    def req(self, quote="all items that went missing during transit", sources=("d",)):
+        return {"title": "Report Missing Items", "description": "The system must report missing items.",
+                "type": "functional", "date": None, "member_ids": ["C1"], "mentions": 1, "sources": list(sources),
+                "evidence": [{"source_doc": "d", "quote": quote, "verified": True}]}
+
+    def test_retrieval_anchors_on_quote_and_falls_back_to_similarity(self):
+        from context import index_documents, retrieve
+        docs = index_documents([{"id": "d", "text": self.DOC}])
+        by_quote = retrieve(self.req(), docs)
+        self.assertEqual(by_quote[0]["how"], "quote")
+        self.assertIn("3 branches lost items", by_quote[0]["text"])
+        lost = retrieve(self.req(quote="a quote the model made up"), docs)       # not found -> similarity
+        self.assertEqual(lost[0]["how"], "similarity")
+        self.assertIn("went missing", lost[0]["text"])
+
+    def test_guards(self):
+        from elaborate import name_ok, paragraph_ok
+        grounding = "3 branches lost items"
+        good = "The system must report items that went missing in transit. " * 3
+        self.assertTrue(paragraph_ok(good + "Three of 3 branches asked.", grounding))
+        self.assertFalse(paragraph_ok(good + "A total of 47 branches asked.", grounding))   # invented number
+        self.assertFalse(paragraph_ok("Too short.", grounding))
+        self.assertTrue(name_ok("Report Missing Items"))
+        self.assertFalse(name_ok("Report."))
+        self.assertFalse(name_ok("A very long name that goes on and on and on and on and on forever"))
+
+    def test_nodes_fall_back_when_the_model_misbehaves(self):
+        import network
+        reqs = [{**self.req(), "contexts": [{"source_doc": "d", "text": "3 branches lost items", "how": "quote"}]}
+                for _ in range(2)]
+        good = "The system must report items that went missing in transit. " * 3
+        old = network.write_batch, network.name_batch
+        network.write_batch = lambda batch: {"P001": good, "P002": good + "Also 99 libraries."}
+        network.name_batch = lambda batch: {"P001": "Report Missing Transit Items", "P002": "x"}
+        try:
+            out = network.write_paragraphs({"requirements": reqs})["requirements"]
+            self.assertEqual([r["paragraph_source"] for r in out], ["model", "merge_summary"])
+            self.assertEqual(out[1]["description"], "The system must report missing items.")
+            named = network.name_requirements({"requirements": out})["requirements"]
+        finally:
+            network.write_batch, network.name_batch = old
+        self.assertEqual([r["title"] for r in named], ["Report Missing Transit Items", "Report Missing Items"])

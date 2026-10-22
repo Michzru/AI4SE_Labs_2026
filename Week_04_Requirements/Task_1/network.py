@@ -16,16 +16,22 @@ from extraction import EXTRACTOR_PROMPT, ExtractionResult, build_user_message
 from merge import MERGER_PROMPT, MergeResult, apply_merge, build_merge_message, cluster_batches, to_item
 from priority import (LEVELS, PRIORITIZER_PROMPT, PriorityResult, baseline, build_priority_message,
                       clamp, signals)
+from context import index_documents, retrieve
+from elaborate import (NAME_PROMPT, PARAGRAPH_PROMPT, NameResult, ParagraphResult, build_name_message,
+                       build_paragraph_message, name_ok, paragraph_ok)
 from render import assign_ids as assign_requirement_ids, check_document, render_markdown
 from review import REVIEWER_PROMPT, ReviewResult, build_review_message
 from textutil import squash, squash_with_positions
 
 TEXT_SUFFIXES = {".txt", ".eml", ".md"}
 DEFAULT_MAX_CHUNK_CHARS = 4000
-MODELS = {"extract": "gpt-5.6-luna", "review": "gpt-6-luna", "merge": "gpt-6-luna", "prioritize": "gpt-5.4-nano"}
+MODELS = {"extract": "gpt-5.6-luna", "review": "gpt-6-luna", "merge": "gpt-6-luna", "prioritize": "gpt-5.4-nano",
+          "paragraph": "gpt-5.6-luna", "name": "gpt-5.4-nano"}
 MAX_REEXTRACTIONS = 2  # feedback-loop cap
 MERGE_BATCH_SIZE = 60  # items per merge call (one topical cluster)
 PRIORITY_BATCH_SIZE = 40
+PARAGRAPH_BATCH_SIZE = 6   # requirements per paragraph-writer call
+NAME_BATCH_SIZE = 40
 MERGE_ROUNDS = 2       # round 2 re-clusters the output of round 1 to catch cross-cluster duplicates
 MAX_CONCURRENCY = 8  # parallel LLM calls
 
@@ -356,6 +362,81 @@ def prioritize(state: State) -> dict:
     return {"requirements": requirements}
 
 
+def retrieve_context(state: State) -> dict:
+    """Deterministic node: attach source passages to each requirement (quote anchoring, TF-IDF fallback)."""
+    docs = index_documents(state["documents"])
+    requirements = [{**r, "contexts": retrieve(r, docs)} for r in state["requirements"]]
+    via = {k: sum(c["how"] == k for r in requirements for c in r["contexts"]) for k in ("quote", "similarity")}
+    print(f"  passages: {via}; requirements without any passage: {sum(not r['contexts'] for r in requirements)}")
+    return {"requirements": requirements}
+
+
+def _batches(items: list[dict], size: int) -> list[list[dict]]:
+    return [items[i:i + size] for i in range(0, len(items), size)]
+
+
+def write_batch(batch: list[dict]) -> dict[str, str]:
+    resp = get_client().chat.completions.parse(
+        model=MODELS["paragraph"],
+        messages=[{"role": "system", "content": PARAGRAPH_PROMPT},
+                  {"role": "user", "content": build_paragraph_message(batch)}],
+        response_format=ParagraphResult,
+        max_completion_tokens=16000,
+    )
+    parsed = resp.choices[0].message.parsed
+    return {i.id: i.paragraph for i in parsed.items} if parsed else {}
+
+
+def write_paragraphs(state: State) -> dict:
+    """LLM node: rewrite each requirement's description as a grounded paragraph from its source passages.
+
+    The model sees only the summary and the retrieved passages, in batches. Code accepts a paragraph only if it
+    has a sensible length and contains no number absent from its grounding; otherwise the old description stays.
+    """
+    work = [{**r, "_pid": f"P{n:03d}"} for n, r in enumerate(state["requirements"], start=1)]
+    with ThreadPoolExecutor(MAX_CONCURRENCY) as pool:
+        answers = {k: v for part in pool.map(write_batch, _batches(work, PARAGRAPH_BATCH_SIZE))
+                   for k, v in part.items()}
+    requirements, rejected = [], 0
+    for r in work:
+        grounding = r["title"] + " " + r["description"] + " " + " ".join(c["text"] for c in r["contexts"])
+        paragraph = answers.get(r["_pid"], "")
+        ok = paragraph_ok(paragraph, grounding)
+        rejected += not ok
+        requirements.append({**{k: v for k, v in r.items() if k != "_pid"},
+                             "summary": r["description"], "description": paragraph if ok else r["description"],
+                             "paragraph_source": "model" if ok else "merge_summary"})
+    print(f"  paragraphs written: {len(work) - rejected}, rejected by guard or missing (old text kept): {rejected}")
+    return {"requirements": requirements}
+
+
+def name_batch(batch: list[dict]) -> dict[str, str]:
+    resp = get_client().chat.completions.parse(
+        model=MODELS["name"],
+        messages=[{"role": "system", "content": NAME_PROMPT},
+                  {"role": "user", "content": build_name_message(batch)}],
+        response_format=NameResult,
+        max_completion_tokens=8000,
+    )
+    parsed = resp.choices[0].message.parsed
+    return {i.id: i.name.strip() for i in parsed.items} if parsed else {}
+
+
+def name_requirements(state: State) -> dict:
+    """LLM node (small model): short descriptive name from the final paragraph; the old title is the fallback."""
+    work = [{**r, "_pid": f"P{n:03d}"} for n, r in enumerate(state["requirements"], start=1)]
+    with ThreadPoolExecutor(MAX_CONCURRENCY) as pool:
+        answers = {k: v for part in pool.map(name_batch, _batches(work, NAME_BATCH_SIZE)) for k, v in part.items()}
+    requirements, renamed = [], 0
+    for r in work:
+        name = answers.get(r["_pid"], "")
+        ok = name_ok(name)
+        renamed += ok and name != r["title"]
+        requirements.append({**{k: v for k, v in r.items() if k != "_pid"}, "title": name if ok else r["title"]})
+    print(f"  names changed: {renamed} of {len(work)}")
+    return {"requirements": requirements}
+
+
 def assign_ids(state: State) -> dict:
     """Deterministic node: REQ-/BL- ids and final ordering, assigned after dedup and never by a model."""
     requirements, blacklist = assign_requirement_ids(state["requirements"], state["blacklist"])
@@ -379,7 +460,7 @@ def render_doc(state: State) -> dict:
 # review_gate may loop back to extract: the loop is wired in build_graph.
 STAGES = ["load_corpus", "chunk_documents", "extract", "verify_evidence",
           "review_completeness", "review_gate", "merge_and_resolve", "prioritize",
-          "assign_ids", "render_doc"]
+          "retrieve_context", "write_paragraphs", "name_requirements", "assign_ids", "render_doc"]
 NODES = {
     "load_corpus": load_corpus,
     "chunk_documents": chunk_documents,
@@ -389,6 +470,9 @@ NODES = {
     "review_gate": review_gate,
     "merge_and_resolve": merge_and_resolve,
     "prioritize": prioritize,
+    "retrieve_context": retrieve_context,
+    "write_paragraphs": write_paragraphs,
+    "name_requirements": name_requirements,
     "assign_ids": assign_ids,
     "render_doc": render_doc,
 }
