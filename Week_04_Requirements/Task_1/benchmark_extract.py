@@ -49,7 +49,7 @@ def main():
     parser.add_argument("input_dir")
     args = parser.parse_args()
     load_dotenv(find_dotenv(usecwd=True))
-    chunks = build_graph().invoke({"input_dir": args.input_dir})["chunks"]
+    chunks = build_graph(stop_after="chunk_documents").invoke({"input_dir": args.input_dir})["chunks"]
     picked = [next(c for c in chunks if c["doc_id"] == d and c["index"] == i) for d, i in SAMPLES]
     client = OpenAI()
     jobs = [(m, c) for m in MODELS for c in picked]
