@@ -153,7 +153,7 @@ We try to be efficient and to save already processd node to get it faster and mo
 | 12 | assign_ids | code | - |
 | 13 | render_doc (with self-check) | code | - |
 
-Network specs: ANS1 five LLM nodes (3, 5, 7, 8, 10, 11 call a model), ANS2 six deterministic nodes, ANS3 feedback loop
+Network specs: ANS1 six LLM nodes (3, 5, 7, 8, 10, 11), ANS2 six deterministic nodes, ANS3 feedback loop
 review_gate -> extract, ANS4 three models, ANS5 LangGraph `StateGraph`. The input is only a directory path
 (`python network.py <dir>`). Output specs OS1-OS9 are addressed by the nodes named in the results below.
 
@@ -175,7 +175,7 @@ analysis in `output/analysis.txt`).
 
 - The first design (one merge call over everything) left many duplicates; clustering by topic plus a second round fixed most of them.
 - Moving all bookkeeping to code (ids, tracing, quotes, ordering, priority baseline) made the LLM nodes safe: every model answer
-  is checked by id, clamped or replaced by a fallback. In the final run no model answer was missing or rejected.
+  is checked by id, clamped or replaced by a fallback. In the final run no priority or paragraph answer was missing or rejected.
 - Three complete runs gave 446, 453 and 421 requirements and 1, 1 and 4 conflicts: the size is stable (+-4 %), the details are not,
   because LLM output is non-deterministic.
 - A defect found in the final review: blacklist reasons sometimes cited internal candidate ids ("C050"). `assign_ids` now
