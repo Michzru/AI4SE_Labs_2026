@@ -4,6 +4,7 @@ import json
 import operator
 import re
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, TypedDict
 
@@ -13,13 +14,15 @@ from langgraph.types import Send
 from openai import OpenAI
 
 from extraction import EXTRACTOR_PROMPT, ExtractionResult, build_user_message
-from merge import MERGER_PROMPT, MergeResult, apply_merge, build_merge_message
+from merge import MERGER_PROMPT, MergeResult, apply_merge, build_merge_message, cluster_batches, to_item
 from review import REVIEWER_PROMPT, ReviewResult, build_review_message
 
 TEXT_SUFFIXES = {".txt", ".eml", ".md"}
 DEFAULT_MAX_CHUNK_CHARS = 4000
 MODELS = {"extract": "gpt-5.6-luna", "review": "gpt-6-luna", "merge": "gpt-6-luna"}
 MAX_REEXTRACTIONS = 2  # feedback-loop cap
+MERGE_BATCH_SIZE = 60  # items per merge call (one topical cluster)
+MERGE_ROUNDS = 2       # round 2 re-clusters the output of round 1 to catch cross-cluster duplicates
 MAX_CONCURRENCY = 8  # parallel LLM calls
 
 # Split points, strongest first: separator lines (=== / ---), blank lines, line breaks, spaces.
@@ -259,27 +262,48 @@ def review_gate(state: State) -> dict:
     return {"iteration": done + 1, "feedback": feedback if done < MAX_REEXTRACTIONS else {}}
 
 
-def merge_and_resolve(state: State) -> dict:
-    """LLM node: merge duplicate candidates, blacklist conflicting/nonsensical ones, unify vocabulary.
-
-    The model only returns decisions (groups of candidate ids, blacklist); apply_merge builds the
-    records from the original candidates.
-    """
-    candidates = state["candidates"]
+def merge_batch(batch: list[dict]) -> MergeResult:
+    """One LLM call: duplicates and conflicts inside one topical cluster."""
+    if len(batch) < 2:
+        return MergeResult(groups=[], blacklist=[])
     resp = get_client().chat.completions.parse(
         model=MODELS["merge"],
         messages=[
             {"role": "system", "content": MERGER_PROMPT},
-            {"role": "user", "content": build_merge_message(candidates)},
+            {"role": "user", "content": build_merge_message(batch)},
         ],
         response_format=MergeResult,
-        max_completion_tokens=64000,
+        max_completion_tokens=32000,
     )
     parsed = resp.choices[0].message.parsed
     if parsed is None:
-        raise RuntimeError("merge_and_resolve: model returned no parsable result")
-    requirements, blacklist, stats = apply_merge(candidates, parsed)
-    print(f"  merge stats: {stats}")
+        print("  warning: unparsable merge result, batch kept unchanged")
+        return MergeResult(groups=[], blacklist=[])
+    return parsed
+
+
+def merge_and_resolve(state: State) -> dict:
+    """LLM node: merge duplicates, blacklist conflicting/nonsensical items, unify vocabulary.
+
+    A single call over all ~800 candidates was lazy (many duplicates left), so each round clusters the items
+    by topic in code (cluster_batches), calls the model per cluster in parallel and repeats on the output.
+    The model returns only decisions; apply_merge builds the records from the original items.
+    """
+    items = [to_item(c) for c in state["candidates"]]
+    blacklist = []
+    for rnd in range(1, MERGE_ROUNDS + 1):
+        batches = cluster_batches(items, MERGE_BATCH_SIZE)
+        with ThreadPoolExecutor(MAX_CONCURRENCY) as pool:
+            results = list(pool.map(merge_batch, batches))
+        items = []
+        for n, (batch, result) in enumerate(zip(batches, results), start=1):
+            merged, bl, stats = apply_merge(batch, result, f"M{rnd}.{n}")
+            items += merged
+            blacklist += bl
+        print(f"  round {rnd}: {len(batches)} clusters -> {len(items)} items, {len(blacklist)} blacklist entries")
+    requirements = sorted(items, key=lambda r: r["member_ids"][0])
+    for r in requirements:
+        del r["id"]
     return {"requirements": requirements, "blacklist": blacklist}
 
 

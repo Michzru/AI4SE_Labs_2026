@@ -99,10 +99,12 @@ class ReviewGateTest(unittest.TestCase):
 
 
 class ApplyMergeTest(unittest.TestCase):
-    def cands(self):
+    def items(self):
+        from merge import to_item
+
         def c(i, doc, title, typ="functional", date=None, ok=True):
-            return {"id": i, "title": title, "description": "d" + i, "evidence": "q" + i, "type": typ,
-                    "date": date, "source_doc": doc, "chunk_index": 0, "evidence_ok": ok}
+            return to_item({"id": i, "title": title, "description": "d" + i, "evidence": "q" + i, "type": typ,
+                            "date": date, "source_doc": doc, "chunk_index": 0, "evidence_ok": ok})
         return [c("C001", "a", "t1", date="2009-05-01"), c("C002", "b", "t2", "constraint", "2009-03-01"),
                 c("C003", "b", "t3"), c("C004", "a", "t4")]
 
@@ -111,20 +113,41 @@ class ApplyMergeTest(unittest.TestCase):
         result = MergeResult(
             groups=[MergedGroup(member_ids=["C001", "C002", "C001", "C999"], title="M", description="md"),
                     MergedGroup(member_ids=["C004"], title="bad", description="x")],   # C004 is blacklisted below
-            blacklist=[BlacklistItem(candidate_ids=["C004"], title="B", reason="r", category="conflict",
+            blacklist=[BlacklistItem(item_ids=["C004"], title="B", reason="r", category="conflict",
                                      conflicts_with=["C001", "C888"])])
-        reqs, bl, stats = apply_merge(self.cands(), result)
-        merged = next(r for r in reqs if r["title"] == "M")
-        self.assertEqual((merged["member_ids"], merged["sources"], merged["mentions"], merged["date"]),
-                         (["C001", "C002"], ["a", "b"], 2, "2009-03-01"))
-        self.assertEqual(len(reqs), 2)                                    # merged group + leftover C003
-        self.assertEqual([r["title"] for r in reqs], ["M", "t3"])
+        merged, bl, stats = apply_merge(self.items(), result, "M1.1")
+        top = next(r for r in merged if r["title"] == "M")
+        self.assertEqual((top["member_ids"], top["sources"], top["mentions"], top["date"], top["id"]),
+                         (["C001", "C002"], ["a", "b"], 2, "2009-03-01", "M1.1-01"))
+        self.assertEqual(sorted(r["title"] for r in merged), ["M", "t3"])      # merged group + leftover C003
         self.assertEqual((bl[0]["member_ids"], bl[0]["conflicts_with"]), (["C004"], ["C001"]))
         self.assertEqual(stats["ignored_ids"], 2)                          # unknown C999, blacklisted C004 in a group
 
     def test_blacklist_has_precedence_over_group(self):
         from merge import BlacklistItem, MergedGroup, MergeResult, apply_merge
         result = MergeResult(groups=[MergedGroup(member_ids=["C001", "C002"], title="M", description="md")],
-                             blacklist=[BlacklistItem(candidate_ids=["C002"], title="B", reason="r", category="nonsense")])
-        reqs, bl, _ = apply_merge(self.cands(), result)
-        self.assertEqual(next(r for r in reqs if r["title"] == "M")["member_ids"], ["C001"])
+                             blacklist=[BlacklistItem(item_ids=["C002"], title="B", reason="r", category="nonsense")])
+        merged, bl, _ = apply_merge(self.items(), result, "M1.1")
+        self.assertEqual(next(r for r in merged if r["title"] == "M")["member_ids"], ["C001"])
+
+    def test_second_round_keeps_candidate_ids_and_counts(self):
+        from merge import MergedGroup, MergeResult, apply_merge
+        first, _, _ = apply_merge(self.items(), MergeResult(
+            groups=[MergedGroup(member_ids=["C001", "C002"], title="M", description="md")], blacklist=[]), "M1.1")
+        second, _, _ = apply_merge(first, MergeResult(
+            groups=[MergedGroup(member_ids=["M1.1-01", "C003"], title="N", description="nd")], blacklist=[]), "M2.1")
+        n = next(r for r in second if r["title"] == "N")
+        self.assertEqual((n["member_ids"], n["mentions"]), (["C001", "C002", "C003"], 3))
+
+
+class ClusterTest(unittest.TestCase):
+    def test_similar_items_share_a_batch_and_nothing_is_lost(self):
+        from merge import cluster_batches, to_item
+        topics = ["report missing damaged items shelf", "staff login card swipe credential"]
+        items = [to_item({"id": f"C{i:03d}", "title": topics[i % 2] + f" v{i}", "description": topics[i % 2],
+                          "evidence": "q", "type": "functional", "date": None, "source_doc": "a",
+                          "chunk_index": 0, "evidence_ok": True}) for i in range(8)]
+        batches = cluster_batches(items, 4)
+        self.assertEqual(sorted(it["id"] for b in batches for it in b), sorted(it["id"] for it in items))
+        for b in batches:
+            self.assertEqual(len({int(it["id"][1:]) % 2 for it in b}), 1)
