@@ -151,3 +151,57 @@ class ClusterTest(unittest.TestCase):
         self.assertEqual(sorted(it["id"] for b in batches for it in b), sorted(it["id"] for it in items))
         for b in batches:
             self.assertEqual(len({int(it["id"][1:]) % 2 for it in b}), 1)
+
+
+class PriorityTest(unittest.TestCase):
+    DOC = ("OE-1: The system must run on Linux\n      or Solaris.\n      [* High Priority]\n\n"
+           "OE-4: Support Firefox.\n      [* Medium Priority]\n\nOE-9: Nothing tagged here.\n")
+
+    def index(self):
+        from textutil import squash_with_positions
+        return {"d": (*squash_with_positions(self.DOC), self.DOC)}
+
+    def req(self, quote, sources=("d",), mentions=1):
+        return {"evidence": [{"source_doc": "d", "quote": quote, "verified": True}],
+                "sources": list(sources), "mentions": mentions}
+
+    def test_stated_priority_is_read_next_to_the_quote(self):
+        from priority import stated_priority
+        idx = self.index()
+        self.assertEqual(stated_priority(self.req("must run on Linux or Solaris"), idx), "Must")
+        self.assertEqual(stated_priority(self.req("Support Firefox."), idx), "Should")
+        self.assertIsNone(stated_priority(self.req("Nothing tagged here."), idx))
+        self.assertIsNone(stated_priority(self.req("a quote that is not in the document"), idx))
+
+    def test_baseline_from_signals(self):
+        from priority import baseline
+        self.assertEqual(baseline({"stated": None, "source_count": 1, "mentions": 9, "strong_words": []})[0], "Could")
+        self.assertEqual(baseline({"stated": None, "source_count": 2, "mentions": 2, "strong_words": []})[0], "Should")
+        self.assertEqual(baseline({"stated": None, "source_count": 3, "mentions": 3, "strong_words": ["must"]})[0], "Must")
+        self.assertEqual(baseline({"stated": "Should", "source_count": 5, "mentions": 5, "strong_words": ["must"]})[0], "Should")
+
+    def test_model_cannot_move_more_than_one_level_or_touch_stated(self):
+        from priority import clamp
+        self.assertEqual(clamp("Could", "Must", locked=False), "Should")
+        self.assertEqual(clamp("Must", "Could", locked=False), "Should")
+        self.assertEqual(clamp("Should", "Must", locked=False), "Must")
+        self.assertEqual(clamp("Should", "Must", locked=True), "Should")
+        self.assertEqual(clamp("Should", None, locked=False), "Should")
+        self.assertEqual(clamp("Should", "Urgent!", locked=False), "Should")
+
+    def test_prioritize_node_falls_back_to_baseline_on_missing_answers(self):
+        import network
+        reqs = [{"title": "a", "description": "d", "type": "functional", "date": None, "member_ids": ["C1"],
+                 "mentions": 1, "sources": ["d"],
+                 "evidence": [{"source_doc": "d", "quote": "Support Firefox.", "verified": True}]},
+                {"title": "b", "description": "d", "type": "functional", "date": None, "member_ids": ["C2"],
+                 "mentions": 1, "sources": ["d"],
+                 "evidence": [{"source_doc": "d", "quote": "Nothing tagged here.", "verified": True}]}]
+        old = network.prioritize_batch
+        network.prioritize_batch = lambda batch: {}      # the model answers nothing at all
+        try:
+            out = network.prioritize({"documents": [{"id": "d", "text": self.DOC}], "requirements": reqs})
+        finally:
+            network.prioritize_batch = old
+        self.assertEqual([(r["priority"], r["priority_source"]) for r in out["requirements"]],
+                         [("Should", "stated"), ("Could", "signals")])

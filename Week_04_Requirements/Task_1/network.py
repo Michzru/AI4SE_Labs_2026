@@ -3,7 +3,6 @@ import argparse
 import json
 import operator
 import re
-import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, TypedDict
@@ -15,13 +14,17 @@ from openai import OpenAI
 
 from extraction import EXTRACTOR_PROMPT, ExtractionResult, build_user_message
 from merge import MERGER_PROMPT, MergeResult, apply_merge, build_merge_message, cluster_batches, to_item
+from priority import (LEVELS, PRIORITIZER_PROMPT, PriorityResult, baseline, build_priority_message,
+                      clamp, signals)
 from review import REVIEWER_PROMPT, ReviewResult, build_review_message
+from textutil import squash, squash_with_positions
 
 TEXT_SUFFIXES = {".txt", ".eml", ".md"}
 DEFAULT_MAX_CHUNK_CHARS = 4000
-MODELS = {"extract": "gpt-5.6-luna", "review": "gpt-6-luna", "merge": "gpt-6-luna"}
+MODELS = {"extract": "gpt-5.6-luna", "review": "gpt-6-luna", "merge": "gpt-6-luna", "prioritize": "gpt-5.4-nano"}
 MAX_REEXTRACTIONS = 2  # feedback-loop cap
 MERGE_BATCH_SIZE = 60  # items per merge call (one topical cluster)
+PRIORITY_BATCH_SIZE = 40
 MERGE_ROUNDS = 2       # round 2 re-clusters the output of round 1 to catch cross-cluster duplicates
 MAX_CONCURRENCY = 8  # parallel LLM calls
 
@@ -192,15 +195,6 @@ def extract(task: dict) -> dict:
     ]}
 
 
-def squash(text: str) -> str:
-    """Normalize for quote matching: Unicode-fold, lowercase, keep letters and digits only.
-
-    Makes the check immune to line wrapping, e-mail '>' prefixes, quote styles and dashes.
-    """
-    text = unicodedata.normalize("NFKC", text).casefold()
-    return "".join(ch for ch in text if ch.isalnum())
-
-
 def verify_evidence(state: State) -> dict:
     """Deterministic node: check each quote against its chunk, assign candidate ids, add source_doc."""
     chunk_text = {(c["doc_id"], c["index"]): squash(c["text"]) for c in state["chunks"]}
@@ -307,10 +301,63 @@ def merge_and_resolve(state: State) -> dict:
     return {"requirements": requirements, "blacklist": blacklist}
 
 
+def prioritize_batch(batch: list[dict]) -> dict[str, tuple[str, str]]:
+    """One nano call: {pid: (level, note)} for a batch of requirements."""
+    resp = get_client().chat.completions.parse(
+        model=MODELS["prioritize"],
+        messages=[
+            {"role": "system", "content": PRIORITIZER_PROMPT},
+            {"role": "user", "content": build_priority_message(batch)},
+        ],
+        response_format=PriorityResult,
+        max_completion_tokens=8000,
+    )
+    parsed = resp.choices[0].message.parsed
+    return {i.id: (i.priority, i.note) for i in parsed.items} if parsed else {}
+
+
+def prioritize(state: State) -> dict:
+    """LLM node (small model) with code guardrails.
+
+    Code computes signals and a baseline level from them; a stated priority in the source is final. The
+    model sees the baseline and may move it by one level; its answer is matched by id, clamped, and any
+    missing id falls back to the baseline. Ordering is done later by code, not by the model.
+    """
+    doc_index = {d["id"]: (*squash_with_positions(d["text"]), d["text"]) for d in state["documents"]}
+    work = []
+    for n, req in enumerate(state["requirements"], start=1):
+        sig = signals(req, doc_index)
+        level, basis = baseline(sig)
+        work.append({**req, "_pid": f"P{n:03d}", "_base": level, "_basis": basis, "_sig": sig})
+    todo = [r for r in work if not r["_sig"]["stated"]]   # stated priorities need no opinion
+    batches = [todo[i:i + PRIORITY_BATCH_SIZE] for i in range(0, len(todo), PRIORITY_BATCH_SIZE)]
+    with ThreadPoolExecutor(MAX_CONCURRENCY) as pool:
+        answers = {k: v for part in pool.map(prioritize_batch, batches) for k, v in part.items()}
+    requirements, changed, missing = [], 0, 0
+    for r in work:
+        proposed, note = answers.get(r["_pid"], (None, ""))
+        locked = bool(r["_sig"]["stated"])
+        final = clamp(r["_base"], proposed, locked)
+        missing += not locked and proposed is None
+        changed += final != r["_base"]
+        basis = r["_basis"]
+        if final != r["_base"]:
+            basis += f" Adjusted from {r['_base']} by model: {note}"
+        requirements.append({
+            **{k: v for k, v in r.items() if not k.startswith("_")},
+            "priority": final, "priority_basis": basis,
+            "priority_source": "stated" if locked else "signals+model" if final != r["_base"] else "signals",
+        })
+    counts = {lvl: sum(r["priority"] == lvl for r in requirements) for lvl in LEVELS}
+    print(f"  priorities {counts}; model changed {changed}, no answer for {missing}, "
+          f"stated in source {sum(r['priority_source'] == 'stated' for r in requirements)}")
+    return {"requirements": requirements}
+
+
 # Pipeline order; also the names of the checkpoint files (output/states/NN_<name>.json).
 # review_gate may loop back to extract: the loop is wired in build_graph.
 STAGES = ["load_corpus", "chunk_documents", "extract", "verify_evidence",
-          "review_completeness", "review_gate", "merge_and_resolve"]
+          "review_completeness", "review_gate", "merge_and_resolve", "prioritize"]
 NODES = {
     "load_corpus": load_corpus,
     "chunk_documents": chunk_documents,
@@ -319,6 +366,7 @@ NODES = {
     "review_completeness": review_completeness,
     "review_gate": review_gate,
     "merge_and_resolve": merge_and_resolve,
+    "prioritize": prioritize,
 }
 FAN_OUT = {"extract": fan_out, "review_completeness": fan_out_review}
 
