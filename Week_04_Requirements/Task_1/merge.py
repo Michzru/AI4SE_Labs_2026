@@ -72,13 +72,8 @@ def to_item(candidate: dict) -> dict:
     }
 
 
-def cluster_batches(items: list[dict], batch_size: int) -> list[list[dict]]:
-    """Group topically similar items (TF-IDF cosine) so that duplicates and conflicts land in one batch.
-
-    Greedy: the first unassigned item seeds a batch, its nearest unassigned neighbours fill it.
-    """
-    if len(items) <= batch_size:
-        return [items]
+def tfidf_vectors(items: list[dict]) -> list[dict[str, float]]:
+    """L2-normalized TF-IDF vectors of title + description (plain Python, no dependencies)."""
     docs = [Counter(w for w in re.findall(r"[a-z]{3,}", f"{it['title']} {it['description']}".lower())
                     if w not in STOPWORDS) for it in items]
     df = Counter(w for d in docs for w in d)
@@ -87,18 +82,28 @@ def cluster_batches(items: list[dict], batch_size: int) -> list[list[dict]]:
         vec = {w: tf * math.log(len(items) / df[w]) for w, tf in d.items()}
         norm = math.sqrt(sum(v * v for v in vec.values())) or 1.0
         vectors.append({w: v / norm for w, v in vec.items()})
+    return vectors
 
-    def sim(i: int, j: int) -> float:
-        a, b = vectors[i], vectors[j]
-        if len(a) > len(b):
-            a, b = b, a
-        return sum(v * b.get(w, 0.0) for w, v in a.items())
 
+def cosine(a: dict[str, float], b: dict[str, float]) -> float:
+    if len(a) > len(b):
+        a, b = b, a
+    return sum(v * b.get(w, 0.0) for w, v in a.items())
+
+
+def cluster_batches(items: list[dict], batch_size: int) -> list[list[dict]]:
+    """Group topically similar items (TF-IDF cosine) so that duplicates and conflicts land in one batch.
+
+    Greedy: the first unassigned item seeds a batch, its nearest unassigned neighbours fill it.
+    """
+    if len(items) <= batch_size:
+        return [items]
+    vectors = tfidf_vectors(items)
     unassigned = list(range(len(items)))
     batches = []
     while unassigned:
         seed, rest = unassigned[0], unassigned[1:]
-        rest.sort(key=lambda j: (-sim(seed, j), j))
+        rest.sort(key=lambda j: (-cosine(vectors[seed], vectors[j]), j))
         take = [seed] + rest[:batch_size - 1]
         batches.append([items[i] for i in sorted(take)])
         taken = set(take)
