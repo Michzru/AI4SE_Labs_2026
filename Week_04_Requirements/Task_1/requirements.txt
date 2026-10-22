@@ -1,1 +1,4 @@
 langgraph
+openai
+pydantic
+python-dotenv
