@@ -65,18 +65,26 @@ class FeedbackLoopTest(unittest.TestCase):
             missing = [{"description": "gap", "evidence": "x", "quote_ok": True}] if task["doc"]["id"] == "a" else []
             return {"reviews": [{"doc_id": task["doc"]["id"], "round": task["round"], "missing": missing}]}
 
-        fakes = {**network.NODES, "extract": fake_extract, "review_completeness": fake_review}
+        calls["merge"] = 0
+
+        def fake_merge(state):
+            calls["merge"] += 1
+            return {"requirements": [], "blacklist": []}
+
+        fakes = {**network.NODES, "extract": fake_extract, "review_completeness": fake_review,
+                 "merge_and_resolve": fake_merge}
         state = {"documents": [{"id": "a", "text": "x"}, {"id": "b", "text": "x"}],
                  "chunks": [{"doc_id": d, "index": 0, "total": 1, "text": "x"} for d in "ab"]}
         old, network.NODES = network.NODES, fakes
         try:
-            result = network.build_graph("extract", "review_gate").invoke(state)
+            result = network.build_graph("extract", "merge_and_resolve").invoke(state)
         finally:
             network.NODES = old
         self.assertEqual(result["iteration"], 3)            # initial review + 2 re-extractions
         self.assertEqual([d for d, f in calls["extract"] if f], ["a", "a"])   # b never re-extracted
         self.assertEqual(calls["review"], 6)                # 2 docs x 3 rounds
         self.assertEqual(result["feedback"], {})
+        self.assertEqual(calls["merge"], 1)                 # merge runs once, after the loop ended
 
 
 class ReviewGateTest(unittest.TestCase):
@@ -88,3 +96,35 @@ class ReviewGateTest(unittest.TestCase):
         out = review_gate(state)
         self.assertEqual(out["feedback"], {"a": "- real"})
         self.assertEqual(out["iteration"], 1)
+
+
+class ApplyMergeTest(unittest.TestCase):
+    def cands(self):
+        def c(i, doc, title, typ="functional", date=None, ok=True):
+            return {"id": i, "title": title, "description": "d" + i, "evidence": "q" + i, "type": typ,
+                    "date": date, "source_doc": doc, "chunk_index": 0, "evidence_ok": ok}
+        return [c("C001", "a", "t1", date="2009-05-01"), c("C002", "b", "t2", "constraint", "2009-03-01"),
+                c("C003", "b", "t3"), c("C004", "a", "t4")]
+
+    def test_merge_blacklist_and_leftovers(self):
+        from merge import BlacklistItem, MergedGroup, MergeResult, apply_merge
+        result = MergeResult(
+            groups=[MergedGroup(member_ids=["C001", "C002", "C001", "C999"], title="M", description="md"),
+                    MergedGroup(member_ids=["C004"], title="bad", description="x")],   # C004 is blacklisted below
+            blacklist=[BlacklistItem(candidate_ids=["C004"], title="B", reason="r", category="conflict",
+                                     conflicts_with=["C001", "C888"])])
+        reqs, bl, stats = apply_merge(self.cands(), result)
+        merged = next(r for r in reqs if r["title"] == "M")
+        self.assertEqual((merged["member_ids"], merged["sources"], merged["mentions"], merged["date"]),
+                         (["C001", "C002"], ["a", "b"], 2, "2009-03-01"))
+        self.assertEqual(len(reqs), 2)                                    # merged group + leftover C003
+        self.assertEqual([r["title"] for r in reqs], ["M", "t3"])
+        self.assertEqual((bl[0]["member_ids"], bl[0]["conflicts_with"]), (["C004"], ["C001"]))
+        self.assertEqual(stats["ignored_ids"], 2)                          # unknown C999, blacklisted C004 in a group
+
+    def test_blacklist_has_precedence_over_group(self):
+        from merge import BlacklistItem, MergedGroup, MergeResult, apply_merge
+        result = MergeResult(groups=[MergedGroup(member_ids=["C001", "C002"], title="M", description="md")],
+                             blacklist=[BlacklistItem(candidate_ids=["C002"], title="B", reason="r", category="nonsense")])
+        reqs, bl, _ = apply_merge(self.cands(), result)
+        self.assertEqual(next(r for r in reqs if r["title"] == "M")["member_ids"], ["C001"])

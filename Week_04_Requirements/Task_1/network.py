@@ -13,11 +13,12 @@ from langgraph.types import Send
 from openai import OpenAI
 
 from extraction import EXTRACTOR_PROMPT, ExtractionResult, build_user_message
+from merge import MERGER_PROMPT, MergeResult, apply_merge, build_merge_message
 from review import REVIEWER_PROMPT, ReviewResult, build_review_message
 
 TEXT_SUFFIXES = {".txt", ".eml", ".md"}
 DEFAULT_MAX_CHUNK_CHARS = 4000
-MODELS = {"extract": "gpt-5.6-luna", "review": "gpt-6-luna"}
+MODELS = {"extract": "gpt-5.6-luna", "review": "gpt-6-luna", "merge": "gpt-6-luna"}
 MAX_REEXTRACTIONS = 2  # feedback-loop cap
 MAX_CONCURRENCY = 8  # parallel LLM calls
 
@@ -66,6 +67,8 @@ class State(TypedDict, total=False):
     iteration: int
     reviews: Annotated[list[dict], operator.add]
     feedback: dict[str, str]
+    requirements: list[dict]
+    blacklist: list[dict]
 
 
 def load_corpus(state: State) -> dict:
@@ -256,10 +259,34 @@ def review_gate(state: State) -> dict:
     return {"iteration": done + 1, "feedback": feedback if done < MAX_REEXTRACTIONS else {}}
 
 
+def merge_and_resolve(state: State) -> dict:
+    """LLM node: merge duplicate candidates, blacklist conflicting/nonsensical ones, unify vocabulary.
+
+    The model only returns decisions (groups of candidate ids, blacklist); apply_merge builds the
+    records from the original candidates.
+    """
+    candidates = state["candidates"]
+    resp = get_client().chat.completions.parse(
+        model=MODELS["merge"],
+        messages=[
+            {"role": "system", "content": MERGER_PROMPT},
+            {"role": "user", "content": build_merge_message(candidates)},
+        ],
+        response_format=MergeResult,
+        max_completion_tokens=64000,
+    )
+    parsed = resp.choices[0].message.parsed
+    if parsed is None:
+        raise RuntimeError("merge_and_resolve: model returned no parsable result")
+    requirements, blacklist, stats = apply_merge(candidates, parsed)
+    print(f"  merge stats: {stats}")
+    return {"requirements": requirements, "blacklist": blacklist}
+
+
 # Pipeline order; also the names of the checkpoint files (output/states/NN_<name>.json).
 # review_gate may loop back to extract: the loop is wired in build_graph.
 STAGES = ["load_corpus", "chunk_documents", "extract", "verify_evidence",
-          "review_completeness", "review_gate"]
+          "review_completeness", "review_gate", "merge_and_resolve"]
 NODES = {
     "load_corpus": load_corpus,
     "chunk_documents": chunk_documents,
@@ -267,6 +294,7 @@ NODES = {
     "verify_evidence": verify_evidence,
     "review_completeness": review_completeness,
     "review_gate": review_gate,
+    "merge_and_resolve": merge_and_resolve,
 }
 FAN_OUT = {"extract": fan_out, "review_completeness": fan_out_review}
 
@@ -288,7 +316,8 @@ def build_graph(start_at: str = STAGES[0], stop_after: str = STAGES[-1]):
             graph.add_edge(source, target)
 
     for source, target in zip([START] + stages, stages):
-        link(source, target)
+        if source != "review_gate":  # the gate's outgoing edge is conditional (loop or move on), see below
+            link(source, target)
     if looped:
         if "extract" not in stages:  # resumed after extract: reachable only through the loop
             graph.add_edge("extract", "verify_evidence")
@@ -301,7 +330,7 @@ def build_graph(start_at: str = STAGES[0], stop_after: str = STAGES[-1]):
             return fan_out_feedback(state) if state.get("feedback") else target
 
         graph.add_conditional_edges("review_gate", route, ["extract", target])
-    if stages[-1] != "review_gate":
+    if stages[-1] != "review_gate":  # a gate that is last already routes to END
         graph.add_edge(stages[-1], END)
     return graph.compile()
 
@@ -327,7 +356,7 @@ def load_snapshot(output_dir: Path, stage: str, iteration: int | None = None) ->
 
 
 def summarize(stage: str, state: dict) -> str:
-    counts = {k: len(state[k]) for k in ("documents", "chunks", "raw_candidates", "candidates") if k in state}
+    counts = {k: len(state[k]) for k in ("documents", "chunks", "raw_candidates", "candidates", "requirements", "blacklist") if k in state}
     text = ", ".join(f"{n} {k}" for k, n in counts.items())
     if "candidates" in state:
         text += f" ({sum(not c['evidence_ok'] for c in state['candidates'])} with unverified quote)"
