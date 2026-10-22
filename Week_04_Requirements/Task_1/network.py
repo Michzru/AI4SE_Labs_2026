@@ -16,6 +16,7 @@ from extraction import EXTRACTOR_PROMPT, ExtractionResult, build_user_message
 from merge import MERGER_PROMPT, MergeResult, apply_merge, build_merge_message, cluster_batches, to_item
 from priority import (LEVELS, PRIORITIZER_PROMPT, PriorityResult, baseline, build_priority_message,
                       clamp, signals)
+from render import assign_ids as assign_requirement_ids, check_document, render_markdown
 from review import REVIEWER_PROMPT, ReviewResult, build_review_message
 from textutil import squash, squash_with_positions
 
@@ -75,6 +76,7 @@ class State(TypedDict, total=False):
     feedback: dict[str, str]
     requirements: list[dict]
     blacklist: list[dict]
+    output_path: str
 
 
 def load_corpus(state: State) -> dict:
@@ -354,10 +356,30 @@ def prioritize(state: State) -> dict:
     return {"requirements": requirements}
 
 
+def assign_ids(state: State) -> dict:
+    """Deterministic node: REQ-/BL- ids and final ordering, assigned after dedup and never by a model."""
+    requirements, blacklist = assign_requirement_ids(state["requirements"], state["blacklist"])
+    return {"requirements": requirements, "blacklist": blacklist}
+
+
+def render_doc(state: State) -> dict:
+    """Deterministic node: write the Markdown document and check it against the output spec."""
+    markdown = render_markdown(state["requirements"], state["blacklist"], [d["id"] for d in state["documents"]])
+    problems = check_document(markdown, state["requirements"], state["blacklist"])
+    if problems:
+        raise RuntimeError("Document self-check failed:\n" + "\n".join(problems))
+    path = Path(state["output_path"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(markdown, encoding="utf-8")
+    print(f"  wrote {path} ({len(markdown) // 1024} kB), self-check passed")
+    return {}
+
+
 # Pipeline order; also the names of the checkpoint files (output/states/NN_<name>.json).
 # review_gate may loop back to extract: the loop is wired in build_graph.
 STAGES = ["load_corpus", "chunk_documents", "extract", "verify_evidence",
-          "review_completeness", "review_gate", "merge_and_resolve", "prioritize"]
+          "review_completeness", "review_gate", "merge_and_resolve", "prioritize",
+          "assign_ids", "render_doc"]
 NODES = {
     "load_corpus": load_corpus,
     "chunk_documents": chunk_documents,
@@ -367,6 +389,8 @@ NODES = {
     "review_gate": review_gate,
     "merge_and_resolve": merge_and_resolve,
     "prioritize": prioritize,
+    "assign_ids": assign_ids,
+    "render_doc": render_doc,
 }
 FAN_OUT = {"extract": fan_out, "review_completeness": fan_out_review}
 
@@ -461,6 +485,7 @@ def main():
     else:
         state = load_snapshot(output_dir, STAGES[STAGES.index(args.start_at) - 1], args.snapshot_iteration)
 
+    state["output_path"] = str(output_dir / "requirements.md")
     graph = build_graph(args.start_at, args.stop_after)
     stage = None
     # "updates" tells us which node just ran, "values" gives the full state after the step

@@ -205,3 +205,35 @@ class PriorityTest(unittest.TestCase):
             network.prioritize_batch = old
         self.assertEqual([(r["priority"], r["priority_source"]) for r in out["requirements"]],
                          [("Should", "stated"), ("Could", "signals")])
+
+
+class RenderTest(unittest.TestCase):
+    def data(self):
+        def req(title, prio, date, members):
+            return {"title": title, "description": "desc " + title, "type": "functional", "date": date,
+                    "member_ids": members, "mentions": 1, "sources": ["a.txt"], "priority": prio,
+                    "priority_basis": "Because.", "priority_source": "signals",
+                    "evidence": [{"source_doc": "a.txt", "quote": "q |\n" + title, "verified": True}]}
+        reqs = [req("Low", "Could", "2009-01-01", ["C1"]), req("Late", "Must", "2009-05-01", ["C2"]),
+                req("Early", "Must", "2009-02-01", ["C3"]), req("Undated", "Must", None, ["C4"])]
+        bl = [{"title": "Bad", "reason": "r", "category": "conflict", "conflicts_with": ["C3", "C9"],
+               "member_ids": ["C5"], "sources": ["b.txt"], "evidence": []}]
+        return reqs, bl
+
+    def test_ids_follow_priority_then_date_and_conflicts_are_mapped(self):
+        from render import assign_ids
+        reqs, bl = assign_ids(*self.data())
+        self.assertEqual([(r["id"], r["title"]) for r in reqs],
+                         [("REQ-001", "Early"), ("REQ-002", "Late"), ("REQ-003", "Undated"), ("REQ-004", "Low")])
+        self.assertEqual((bl[0]["id"], bl[0]["conflicts_with"]), ("BL-001", ["REQ-001"]))   # C9 unknown -> dropped
+
+    def test_document_passes_self_check_and_check_detects_problems(self):
+        from render import assign_ids, check_document, render_markdown
+        reqs, bl = assign_ids(*self.data())
+        md = render_markdown(reqs, bl, ["a.txt", "b.txt"])
+        self.assertEqual(check_document(md, reqs, bl), [])
+        self.assertIn("## Priority scale", md)
+        self.assertIn("### BL-001 - Bad", md)
+        broken = [{**reqs[0], "priority": "Urgent", "sources": []}] + reqs[1:]
+        problems = check_document(md, broken, bl)
+        self.assertTrue(any("OS6" in p for p in problems) and any("OS4" in p for p in problems))
