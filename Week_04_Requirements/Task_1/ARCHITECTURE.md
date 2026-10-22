@@ -15,7 +15,10 @@ flowchart TD
     E -- "missing requirements<br/>and iteration &lt; 2" --> C
     E -- ok --> F[merge_and_resolve<br/><b>LLM gpt-6-luna</b>]
     F --> G[prioritize<br/><b>LLM gpt-5.4-nano</b>]
-    G --> H[assign_ids<br/><i>code</i>]
+    G --> R[retrieve_context<br/><i>code</i>]
+    R --> P[write_paragraphs<br/><b>LLM gpt-5.6-luna</b>]
+    P --> N[name_requirements<br/><b>LLM gpt-5.4-nano</b>]
+    N --> H[assign_ids<br/><i>code</i>]
     H --> I[render_doc<br/><i>code</i>]
     I --> END([END])
 ```
@@ -33,10 +36,13 @@ Legend: *code* = deterministic node, **LLM** = agentic node.
 | 5 | `review_completeness` | LLM `gpt-6-luna` | document text + its candidates -> verdict + missing items | **feedback loop**: conditional edge back to `extract`, max 2 iterations |
 | 6 | `merge_and_resolve` | LLM `gpt-6-luna` | all verified candidates -> merged requirements + blacklist | dedupe (union of sources), conflicts, nonsense, unified vocabulary |
 | 7 | `prioritize` | LLM `gpt-5.4-nano` | merged requirements -> + priority | MoSCoW rubric; signals: number of sources, "critical" wording, survey share |
+| 7a | `retrieve_context` | code | requirements -> + `contexts` | passages from the source documents: exact quote anchoring (+ TF-IDF fallback), long lists windowed around the quote |
+| 7b | `write_paragraphs` | LLM `gpt-5.6-luna` | summary + passages -> paragraph | batches of 6; only facts from the passages; code guard (length, no invented numbers), fallback = merge summary |
+| 7c | `name_requirements` | LLM `gpt-5.4-nano` | paragraph -> short name | batches of 40; guard on length/format, fallback = old title |
 | 8 | `assign_ids` | code | requirements, blacklist -> with `REQ-001` / `BL-001` | IDs assigned after dedup, never by an LLM; ordering by date |
 | 9 | `render_doc` | code | final state -> `.md` | also self-checks: every requirement has id, name, paragraph, priority, sources |
 
-Models: 3 distinct (`gpt-5.6-luna`, `gpt-6-luna`, `gpt-5.4-nano`). Chosen from `benchmark_extract.py`
+Models: 3 distinct (`gpt-5.6-luna`: extract + paragraphs, `gpt-6-luna`: review + merge, `gpt-5.4-nano`: prioritize + names). Chosen from `benchmark_extract.py`
 (recall on dense text, verbatim citations, speed).
 
 ## State (LangGraph `State`)

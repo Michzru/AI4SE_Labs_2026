@@ -6,7 +6,7 @@ reviewer-found missing items per round: {0: 12, 1: 6, 2: 6} (still open after th
 == Spec checks (OS1, OS2, OS4, OS5, OS6, OS9)
 self-check problems: none
 priority distribution: {'Must': 26, 'Should': 150, 'Could': 277} | priority source: {'signals': 414, 'signals+model': 23, 'stated': 16}
-avg description length: 124 chars
+avg description length: 427 chars
 blacklist categories: {'conflict': 1, 'nonsense': 16, 'out_of_scope': 5} | with conflicts_with: 1
 
 == Tracing (OS4): requirements per source document
@@ -37,25 +37,25 @@ requirements from 1 / 2 / 3+ documents: 305 104 44
 none
 
 == Possible remaining duplicates (OS3): TF-IDF cosine >= 0.6
-54 pairs of 453 requirements; identical titles: 11
-  0.97  REQ-154 Provide Pivot Table Output  <->  REQ-366 Generate Pivot Table Output
-  0.94  REQ-344 Claims Returned Report  <->  REQ-345 Claims Returned Report
-  0.87  REQ-391 Patron Survey Answer List  <->  REQ-395 Patrons By Survey Answer
-  0.87  REQ-332 Bib Records Missing MARC  <->  REQ-406 Records Missing MARC Fields
-  0.85  REQ-060 Report Long In-Transit Items  <->  REQ-092 Report Overdue In-Transit Items
-  0.85  REQ-338 Circulation By Dewey  <->  REQ-342 Circulation Count by Dewey
-  0.85  REQ-025 Relational Database Backend  <->  REQ-132 Use Relational Database
-  0.84  REQ-303 Report Accrued Charges  <->  REQ-408 Report Accrued Charges
-  0.84  REQ-081 Report by Patron Home Branch  <->  REQ-252 Filter By Home Branch
-  0.83  REQ-081 Report by Patron Home Branch  <->  REQ-253 Group By Home Branch
-  0.81  REQ-234 Report Deletions By Location  <->  REQ-235 Report Deletions By System
-  0.81  REQ-020 Document Record Data Specifications  <->  REQ-108 Document Managed Record Specifications
-  0.79  REQ-405 Query Transaction Types  <->  REQ-427 Report Transaction Types
-  0.77  REQ-093 Select Transfer Titles  <->  REQ-277 Select Items For Transfer
-  0.75  REQ-192 Support Consortium Administration  <->  REQ-349 Consortium-Level System Administration
+80 pairs of 453 requirements; identical titles: 3
+  0.97  REQ-407 Report IntraPINES Loans By Facility  <->  REQ-408 Report IntraPINES Loans By System
+  0.89  REQ-425 Report Received Items For Holds  <->  REQ-427 Report Sent Items For Holds
+  0.87  REQ-304 Report Accrued Fines By Period  <->  REQ-396 Report Accrued Charges By Type
+  0.87  REQ-108 Filter By Survey Name  <->  REQ-300 Survey Name To ID Resolution
+  0.86  REQ-352 Group Transactions By System  <->  REQ-353 Group Transactions By Terminal
+  0.80  REQ-363 List Patrons By Survey Answer  <->  REQ-421 Report Patron Counts By Survey Answer
+  0.80  REQ-402 Report Cataloged In House Use Counts  <->  REQ-418 Report Monthly Noncataloged In House Use
+  0.80  REQ-023 Provide Management Process Data Specifications  <->  REQ-111 Management Data Specifications And Dictionaries
+  0.79  REQ-381 Provide Claims Returned Report  <->  REQ-403 Report Claims Returned Items
+  0.78  REQ-354 Identify Bibliographic MARC Missing Fields  <->  REQ-399 Report Bibliographic Missing MARC Fields
+  0.78  REQ-160 Report Circulation By Modifiers  <->  REQ-379 Provide Circulation Modifier Counts
+  0.76  REQ-173 Report Unfilled Holds  <->  REQ-427 Report Sent Items For Holds
+  0.76  REQ-173 Report Unfilled Holds  <->  REQ-425 Report Received Items For Holds
+  0.75  REQ-105 Support Environment Template Migration  <->  REQ-298 Separated Training Environment
+  0.74  REQ-086 Group And Filter Patron Zip  <->  REQ-244 Filter And Group Patrons By ZIP Code
 
 == Vocabulary (OS7): word-variant usage in requirement titles + descriptions
-  patron / user / borrower / customer: {'patron': 151, 'user': 80, 'borrower': 0, 'customer': 0}
-  item / copy: {'item': 164, 'copy': 15}
-  branch / library / location: {'branch': 34, 'library': 51, 'location': 37}
-  staff / librarian / employee: {'staff': 61, 'librarian': 0, 'employee': 1}
+  patron / user / borrower / customer: {'patron': 373, 'user': 48, 'borrower': 0, 'customer': 0}
+  item / copy: {'item': 432, 'copy': 23}
+  branch / library / location: {'branch': 132, 'library': 160, 'location': 104}
+  staff / librarian / employee: {'staff': 510, 'librarian': 1, 'employee': 2}
