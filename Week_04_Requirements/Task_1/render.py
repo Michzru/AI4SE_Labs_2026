@@ -18,7 +18,10 @@ def assign_ids(requirements: list[dict], blacklist: list[dict]) -> tuple[list[di
     reqs = [{**r, "id": f"REQ-{n:03d}"} for n, r in enumerate(ordered, start=1)]
     owner = {cid: r["id"] for r in reqs for cid in r["member_ids"]}   # candidate id -> requirement id
     ordered_bl = sorted(blacklist, key=lambda b: (b["category"], b["title"]))
+    # the merge model sometimes cites internal ids (C050, M1.2-03) in its reason; show REQ ids instead
+    ref = re.compile(r"\b(C\d+|M\d\.\d+-\d+)\b")
     bl = [{**b, "id": f"BL-{n:03d}",
+           "reason": ref.sub(lambda m: owner.get(m.group(1), "a related requirement"), b["reason"]),
            "conflicts_with": sorted({owner[c] for c in b["conflicts_with"] if c in owner})}
           for n, b in enumerate(ordered_bl, start=1)]
     return reqs, bl

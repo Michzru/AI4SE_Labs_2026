@@ -216,7 +216,7 @@ class RenderTest(unittest.TestCase):
                     "evidence": [{"source_doc": "a.txt", "quote": "q |\n" + title, "verified": True}]}
         reqs = [req("Low", "Could", "2009-01-01", ["C1"]), req("Late", "Must", "2009-05-01", ["C2"]),
                 req("Early", "Must", "2009-02-01", ["C3"]), req("Undated", "Must", None, ["C4"])]
-        bl = [{"title": "Bad", "reason": "r", "category": "conflict", "conflicts_with": ["C3", "C9"],
+        bl = [{"title": "Bad", "reason": "Clashes with C3 and C77.", "category": "conflict", "conflicts_with": ["C3", "C9"],
                "member_ids": ["C5"], "sources": ["b.txt"], "evidence": []}]
         return reqs, bl
 
@@ -226,6 +226,7 @@ class RenderTest(unittest.TestCase):
         self.assertEqual([(r["id"], r["title"]) for r in reqs],
                          [("REQ-001", "Early"), ("REQ-002", "Late"), ("REQ-003", "Undated"), ("REQ-004", "Low")])
         self.assertEqual((bl[0]["id"], bl[0]["conflicts_with"]), ("BL-001", ["REQ-001"]))   # C9 unknown -> dropped
+        self.assertEqual(bl[0]["reason"], "Clashes with REQ-001 and a related requirement.")
 
     def test_document_passes_self_check_and_check_detects_problems(self):
         from render import assign_ids, check_document, render_markdown

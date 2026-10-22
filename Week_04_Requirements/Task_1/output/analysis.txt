@@ -1,61 +1,61 @@
 == Pipeline
-documents 20, chunks 55, candidates 836 -> requirements 453 + blacklist 22
-unverified quotes among candidates: 25 of 836
-reviewer-found missing items per round: {0: 12, 1: 6, 2: 6} (still open after the last round: 6, ~0.7% of candidates)
+documents 20, chunks 55, candidates 803 -> requirements 421 + blacklist 25
+unverified quotes among candidates: 31 of 803
+reviewer-found missing items per round: {0: 8, 1: 4, 2: 3} (still open after the last round: 3, ~0.4% of candidates)
 
 == Spec checks (OS1, OS2, OS4, OS5, OS6, OS9)
 self-check problems: none
-priority distribution: {'Must': 26, 'Should': 150, 'Could': 277} | priority source: {'signals': 414, 'signals+model': 23, 'stated': 16}
-avg description length: 427 chars
-blacklist categories: {'conflict': 1, 'nonsense': 16, 'out_of_scope': 5} | with conflicts_with: 1
+priority distribution: {'Must': 25, 'Should': 123, 'Could': 273} | priority source: {'signals': 392, 'stated': 16, 'signals+model': 13}
+avg description length: 419 chars
+blacklist categories: {'conflict': 4, 'nonsense': 21} | with conflicts_with: 4
 
 == Tracing (OS4): requirements per source document
-   5  conversations/conv_pines014_material_volume.eml
-   6  conversations/conv_pines015_capacity_interface.eml
-   8  conversations/conv_pines016_shelf_space.eml
-  19  conversations/conv_pines018_item_transfer.eml
-  10  conversations/conv_pines019_020_missing_intransit.eml
-  20  conversations/conv_pines021_item_purging.eml
-  12  conversations/conv_pines022_deletions.eml
-  22  conversations/conv_pines023_patron_characteristics.eml
-  13  conversations/conv_pines024_inactive_patrons.eml
- 224  early_draft_srs_galecia.txt
-  16  email_financial_reports.eml
-  33  email_report_features.eml
-   9  email_staff_login.eml
-  86  evergreen_reference_2009.txt
-  26  interview_cataloging_2009-05-08.txt
+   2  conversations/conv_pines014_material_volume.eml
+   8  conversations/conv_pines015_capacity_interface.eml
+  10  conversations/conv_pines016_shelf_space.eml
+  21  conversations/conv_pines018_item_transfer.eml
+   9  conversations/conv_pines019_020_missing_intransit.eml
+  16  conversations/conv_pines021_item_purging.eml
+   9  conversations/conv_pines022_deletions.eml
+  16  conversations/conv_pines023_patron_characteristics.eml
+  12  conversations/conv_pines024_inactive_patrons.eml
+ 213  early_draft_srs_galecia.txt
+  12  email_financial_reports.eml
+  29  email_report_features.eml
+   7  email_staff_login.eml
+  89  evergreen_reference_2009.txt
+  25  interview_cataloging_2009-05-08.txt
   17  interview_sysadmin_2009-05-10.txt
-  12  meeting_minutes/meeting_2009-03-15_minutes.txt
+  14  meeting_minutes/meeting_2009-03-15_minutes.txt
   36  meeting_minutes/meeting_2009-07-20_minutes.txt
-  39  meeting_tech_subcommittee_2009-06-30.txt
-  42  survey_results_2009.txt
+  38  meeting_tech_subcommittee_2009-06-30.txt
+  48  survey_results_2009.txt
 documents with no requirement: none
-requirements from 1 / 2 / 3+ documents: 305 104 44
+requirements from 1 / 2 / 3+ documents: 278 99 44
 
 == Noise leaking into requirements
 none
 
 == Possible remaining duplicates (OS3): TF-IDF cosine >= 0.6
-80 pairs of 453 requirements; identical titles: 3
-  0.97  REQ-407 Report IntraPINES Loans By Facility  <->  REQ-408 Report IntraPINES Loans By System
-  0.89  REQ-425 Report Received Items For Holds  <->  REQ-427 Report Sent Items For Holds
-  0.87  REQ-304 Report Accrued Fines By Period  <->  REQ-396 Report Accrued Charges By Type
-  0.87  REQ-108 Filter By Survey Name  <->  REQ-300 Survey Name To ID Resolution
-  0.86  REQ-352 Group Transactions By System  <->  REQ-353 Group Transactions By Terminal
-  0.80  REQ-363 List Patrons By Survey Answer  <->  REQ-421 Report Patron Counts By Survey Answer
-  0.80  REQ-402 Report Cataloged In House Use Counts  <->  REQ-418 Report Monthly Noncataloged In House Use
-  0.80  REQ-023 Provide Management Process Data Specifications  <->  REQ-111 Management Data Specifications And Dictionaries
-  0.79  REQ-381 Provide Claims Returned Report  <->  REQ-403 Report Claims Returned Items
-  0.78  REQ-354 Identify Bibliographic MARC Missing Fields  <->  REQ-399 Report Bibliographic Missing MARC Fields
-  0.78  REQ-160 Report Circulation By Modifiers  <->  REQ-379 Provide Circulation Modifier Counts
-  0.76  REQ-173 Report Unfilled Holds  <->  REQ-427 Report Sent Items For Holds
-  0.76  REQ-173 Report Unfilled Holds  <->  REQ-425 Report Received Items For Holds
-  0.75  REQ-105 Support Environment Template Migration  <->  REQ-298 Separated Training Environment
-  0.74  REQ-086 Group And Filter Patron Zip  <->  REQ-244 Filter And Group Patrons By ZIP Code
+86 pairs of 421 requirements; identical titles: 2
+  0.98  REQ-382 Report IntraPINES Loans All Facilities  <->  REQ-383 Report IntraPINES Loans All Systems
+  0.96  REQ-384 Report IntraPINES Loans Grouped By Facility  <->  REQ-385 Report IntraPINES Loans Grouped By System
+  0.92  REQ-346 Monthly Cataloged In-House Use Count  <->  REQ-347 Monthly Non-Cataloged In-House Use Report
+  0.87  REQ-219 Group Patrons By Patron Type  <->  REQ-220 Group Patrons By Preferred Language
+  0.86  REQ-382 Report IntraPINES Loans All Facilities  <->  REQ-384 Report IntraPINES Loans Grouped By Facility
+  0.85  REQ-383 Report IntraPINES Loans All Systems  <->  REQ-384 Report IntraPINES Loans Grouped By Facility
+  0.84  REQ-052 Generate Shelf Space Reports Branches  <->  REQ-180 Compare Library Shelf Space SystemAverage
+  0.84  REQ-383 Report IntraPINES Loans All Systems  <->  REQ-385 Report IntraPINES Loans Grouped By System
+  0.82  REQ-382 Report IntraPINES Loans All Facilities  <->  REQ-385 Report IntraPINES Loans Grouped By System
+  0.80  REQ-020 Provide Authority Bibliographic Data Specs  <->  REQ-101 Provide Management Record Data Specifications
+  0.80  REQ-299 Cataloged And Uncataloged Merge  <->  REQ-300 Combined Total Circulation Report
+  0.79  REQ-204 Report Deletions By Branch  <->  REQ-205 Report Deletions By System
+  0.79  REQ-147 Type-Based Checkout Renewal Counting  <->  REQ-208 Count Checkout And Renewal Variants
+  0.78  REQ-232 Display Last Item Edit Date  <->  REQ-315 Exclude Last Edit From Circulation
+  0.78  REQ-293 Allow Admin Run System Reports  <->  REQ-295 Allow Local System Admin Configuration
 
 == Vocabulary (OS7): word-variant usage in requirement titles + descriptions
-  patron / user / borrower / customer: {'patron': 373, 'user': 48, 'borrower': 0, 'customer': 0}
-  item / copy: {'item': 432, 'copy': 23}
-  branch / library / location: {'branch': 132, 'library': 160, 'location': 104}
-  staff / librarian / employee: {'staff': 510, 'librarian': 1, 'employee': 2}
+  patron / user / borrower / customer: {'patron': 327, 'user': 45, 'borrower': 0, 'customer': 0}
+  item / copy: {'item': 391, 'copy': 13}
+  branch / library / location: {'branch': 112, 'library': 150, 'location': 88}
+  staff / librarian / employee: {'staff': 455, 'librarian': 2, 'employee': 1}
