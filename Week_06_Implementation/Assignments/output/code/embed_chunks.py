@@ -10,27 +10,27 @@ computed locally; the LLM is only used to describe the chunk.
 
 Output: chunk_store.json – list of {chunk metadata, text, summary, embed_text, embedding}.
 Summaries are cached in summaries.json so re-runs do not call the LLM again.
+Other summary models (experiment in Task 5) write to stores/chunk_store_<model>.json.
 
 Usage:
-    python embed_chunks.py
+    python embed_chunks.py [--summary-model gpt-5-mini]
 """
 from __future__ import annotations
 
+import argparse
 import json
-import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
-from dotenv import load_dotenv
 from fastembed import TextEmbedding
-from openai import OpenAI
+
+from llm import chat
 
 HERE = Path(__file__).resolve().parent
 CHUNKS = HERE / "chunks.json"
-SUMMARIES = HERE / "summaries.json"
-STORE = HERE / "chunk_store.json"
+STORES_DIR = HERE / "stores"
 
 SUMMARY_MODEL = "gpt-5-mini"
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
@@ -54,14 +54,15 @@ def get_embedder() -> TextEmbedding:
     return _embedder
 
 
-def summarize(client: OpenAI, chunk: dict) -> str:
-    resp = client.chat.completions.create(
-        model=SUMMARY_MODEL,
-        reasoning_effort="low",
-        messages=[{"role": "system", "content": SYSTEM_PROMPT},
-                  {"role": "user", "content": chunk["text"]}],
-    )
-    return resp.choices[0].message.content.strip()
+def store_paths(summary_model: str = SUMMARY_MODEL) -> tuple[Path, Path]:
+    """(summaries cache, chunk store) for a summary model; the default model keeps the Task 3 paths."""
+    if summary_model == SUMMARY_MODEL:
+        return HERE / "summaries.json", HERE / "chunk_store.json"
+    return STORES_DIR / f"summaries_{summary_model}.json", STORES_DIR / f"chunk_store_{summary_model}.json"
+
+
+def summarize(model: str, chunk: dict) -> str:
+    return chat(model, SYSTEM_PROMPT, chunk["text"])["text"]
 
 
 def build_embed_text(chunk: dict, summary: str) -> str:
@@ -86,18 +87,18 @@ def embed_query(text: str) -> np.ndarray:
     return np.array(next(iter(get_embedder().query_embed(text))), dtype=np.float32)
 
 
-def main() -> None:
-    load_dotenv(HERE / ".env")
-    client = OpenAI(api_key=os.environ["API_KEY"])
+def build_store(summary_model: str = SUMMARY_MODEL) -> Path:
+    summaries_path, store_path = store_paths(summary_model)
+    store_path.parent.mkdir(exist_ok=True)
     chunks = json.loads(CHUNKS.read_text(encoding="utf-8"))
 
-    cache: dict[str, str] = json.loads(SUMMARIES.read_text()) if SUMMARIES.exists() else {}
+    cache: dict[str, str] = json.loads(summaries_path.read_text()) if summaries_path.exists() else {}
     todo = [c for c in chunks if c["id"] not in cache]
-    print(f"summaries: {len(cache)} cached, {len(todo)} to generate with {SUMMARY_MODEL}")
+    print(f"summaries: {len(cache)} cached, {len(todo)} to generate with {summary_model}")
     with ThreadPoolExecutor(max_workers=8) as pool:
-        for c, s in zip(todo, pool.map(lambda c: summarize(client, c), todo)):
+        for c, s in zip(todo, pool.map(lambda c: summarize(summary_model, c), todo)):
             cache[c["id"]] = s
-    SUMMARIES.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
+    summaries_path.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
 
     embed_texts = [build_embed_text(c, cache[c["id"]]) for c in chunks]
     vectors = embed_documents(embed_texts)
@@ -107,9 +108,12 @@ def main() -> None:
         "text": c["text"], "summary": cache[c["id"]], "embed_text": t,
         "embedding": [round(float(x), 6) for x in v],
     } for c, t, v in zip(chunks, embed_texts, vectors)]
-    STORE.write_text(json.dumps(store, ensure_ascii=False), encoding="utf-8")
-    print(f"{len(store)} chunks x {vectors.shape[1]} dims ({EMBED_MODEL}) -> {STORE}")
+    store_path.write_text(json.dumps(store, ensure_ascii=False), encoding="utf-8")
+    print(f"{len(store)} chunks x {vectors.shape[1]} dims ({EMBED_MODEL}) -> {store_path}")
+    return store_path
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--summary-model", default=SUMMARY_MODEL)
+    build_store(ap.parse_args().summary_model)

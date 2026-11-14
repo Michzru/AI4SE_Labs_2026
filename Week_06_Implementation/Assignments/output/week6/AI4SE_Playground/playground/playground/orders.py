@@ -33,7 +33,15 @@ class OrderStateMachine:
         return target in OrderStateMachine.allowed_from(source)
 
     def transition(self, source: OrderStatus, target: OrderStatus) -> OrderStatus:
-        pass
+        """Attempt to transition from ``source`` to ``target``.
+
+        Return ``target`` if allowed, otherwise raise InvalidTransitionError(source, target).
+        """
+        # Validate source is OrderStatus via allowed_from (which raises TypeError if not)
+        allowed = OrderStateMachine.allowed_from(source)
+        if target in allowed:
+            return target
+        raise InvalidTransitionError(source, target)
 
     def __call__(self, source: OrderStatus, target: OrderStatus) -> OrderStatus:
         """Convenience alias for :meth:`transition`."""
@@ -101,7 +109,8 @@ class Order:
         self._status = new_status
 
     def __len__(self) -> int:
-        pass
+        """Return the number of line items."""
+        return len(self._items)
 
     def __iter__(self) -> Iterator[LineItem]:
         """Iterate over a tuple snapshot of the order's line items."""
@@ -181,7 +190,14 @@ class OrderLog:
         self._orders.append(order)
 
     def by_status(self, status: OrderStatus) -> Iterator[Order]:
-        pass
+        """Yield orders whose status matches ``status``."""
+        def _gen() -> Iterator[Order]:
+            if not isinstance(status, OrderStatus):
+                raise TypeError("status must be OrderStatus")
+            for order in self._orders:
+                if order.status is status:
+                    yield order
+        return _gen()
 
     def __getitem__(self, index: int) -> Order:
         """Return the order at ``index``."""

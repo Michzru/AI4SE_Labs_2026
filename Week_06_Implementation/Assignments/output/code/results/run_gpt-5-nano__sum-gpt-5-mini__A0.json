@@ -1,0 +1,395 @@
+{
+  "tests": {
+    "ran": 481,
+    "failed": 8,
+    "passed": 473,
+    "failing": [
+      "tests.test_orders.OrderTotalTests.test_total_reflects_merged_quantities_for_bulk_discount",
+      "tests.test_pricing.BulkDiscountPriceTests.test_at_threshold_applies_discount",
+      "tests.test_pricing.BulkDiscountPriceTests.test_call_matches_price",
+      "tests.test_pricing.BulkDiscountPriceTests.test_discount_uses_floor_division",
+      "tests.test_pricing.BulkDiscountPriceTests.test_full_discount_yields_zero",
+      "tests.test_pricing.BulkDiscountPriceTests.test_quantity_summed_across_lines",
+      "tests.test_pricing.BulkDiscountPriceTests.test_wraps_base_with_tax",
+      "tests.test_pricing.BulkDiscountPriceTests.test_zero_percent_returns_base_even_above_threshold"
+    ],
+    "import_error": false,
+    "raw_tail": ""
+  },
+  "newly_broken": [
+    "tests.test_pricing.BulkDiscountPriceTests.test_call_matches_price"
+  ],
+  "broken_outside_task_tests": [],
+  "tasks_solved": 9,
+  "answers": [
+    {
+      "text": "```python\n    @property\n    def is_terminal(self) -> bool:\n        return self in {OrderStatus.SHIPPED, OrderStatus.CANCELLED}\n```",
+      "prompt_tokens": 2172,
+      "completion_tokens": 171,
+      "seconds": 1.96,
+      "retrieved": [
+        {
+          "id": "playground/playground/enums.py::000",
+          "score": 0.8149
+        },
+        {
+          "id": "playground/tests/test_enums.py::001",
+          "score": 0.8014
+        },
+        {
+          "id": "playground/playground/orders.py::000",
+          "score": 0.7926
+        },
+        {
+          "id": "playground/tests/test_orders.py::001",
+          "score": 0.7464
+        },
+        {
+          "id": "playground/playground/orders.py::003",
+          "score": 0.7403
+        }
+      ],
+      "prompt_chars": 8767,
+      "task": "OrderStatus.is_terminal",
+      "file": "playground/playground/enums.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 4,
+      "tests_passed": 4,
+      "solved": true
+    },
+    {
+      "text": "```python\ndef __contains__(self, sku: object) -> bool:\n    if not isinstance(sku, str):\n        return False\n    try:\n        sku = normalize_sku(sku)\n    except Exception:\n        return False\n    if sku not in self._product_repo:\n        return False\n    return sku in self._on_hand\n```",
+      "prompt_tokens": 2705,
+      "completion_tokens": 1042,
+      "seconds": 5.82,
+      "retrieved": [
+        {
+          "id": "playground/playground/inventory.py::001",
+          "score": 0.8515
+        },
+        {
+          "id": "playground/tests/test_inventory.py::004",
+          "score": 0.8224
+        },
+        {
+          "id": "playground/tests/test_inventory.py::001",
+          "score": 0.8089
+        },
+        {
+          "id": "playground/playground/inventory.py::003",
+          "score": 0.7558
+        },
+        {
+          "id": "playground/playground/inventory.py::000",
+          "score": 0.7558
+        }
+      ],
+      "prompt_chars": 10005,
+      "task": "InventoryLedger.__contains__",
+      "file": "playground/playground/inventory.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 5,
+      "tests_passed": 5,
+      "solved": true
+    },
+    {
+      "text": "def stock_report(self) -> Dict[str, int]:\n    report: Dict[str, int] = {}\n    for sku in self.ledger:\n        report[sku] = self.ledger.available(sku)\n    return report",
+      "prompt_tokens": 2656,
+      "completion_tokens": 374,
+      "seconds": 2.71,
+      "retrieved": [
+        {
+          "id": "playground/playground/inventory.py::003",
+          "score": 0.858
+        },
+        {
+          "id": "playground/playground/inventory.py::001",
+          "score": 0.7952
+        },
+        {
+          "id": "playground/tests/test_inventory.py::001",
+          "score": 0.7925
+        },
+        {
+          "id": "playground/tests/test_inventory.py::007",
+          "score": 0.7921
+        },
+        {
+          "id": "playground/playground/inventory.py::000",
+          "score": 0.7898
+        }
+      ],
+      "prompt_chars": 10062,
+      "task": "Warehouse.stock_report",
+      "file": "playground/playground/inventory.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 3,
+      "tests_passed": 3,
+      "solved": true
+    },
+    {
+      "text": "```python\ndef transition(self, source: OrderStatus, target: OrderStatus) -> OrderStatus:\n    \"\"\"Return ``target`` if the transition is allowed, else raise.\"\"\"\n    if not isinstance(source, OrderStatus):\n        raise TypeError(\"source must be OrderStatus\")\n    if not isinstance(target, OrderStatus):\n        raise TypeError(\"target must be OrderStatus\")\n    if self.can_transition(source, target):\n        return target\n    raise InvalidTransitionError(source, target)\n```",
+      "prompt_tokens": 3114,
+      "completion_tokens": 364,
+      "seconds": 2.59,
+      "retrieved": [
+        {
+          "id": "playground/playground/orders.py::000",
+          "score": 0.8594
+        },
+        {
+          "id": "playground/tests/test_orders.py::001",
+          "score": 0.7982
+        },
+        {
+          "id": "playground/playground/orders.py::001",
+          "score": 0.7555
+        },
+        {
+          "id": "playground/playground/inventory.py::002",
+          "score": 0.7256
+        },
+        {
+          "id": "playground/playground/simulation.py::002",
+          "score": 0.705
+        }
+      ],
+      "prompt_chars": 13222,
+      "task": "OrderStateMachine.transition",
+      "file": "playground/playground/orders.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 24,
+      "tests_passed": 24,
+      "solved": true
+    },
+    {
+      "text": "```python\ndef by_status(self, status: OrderStatus) -> Iterator[Order]:\n    if not isinstance(status, OrderStatus):\n        raise TypeError(\"status must be OrderStatus\")\n    for order in self._orders:\n        if order.status == status:\n            yield order\n```",
+      "prompt_tokens": 2488,
+      "completion_tokens": 643,
+      "seconds": 4.06,
+      "retrieved": [
+        {
+          "id": "playground/playground/orders.py::003",
+          "score": 0.8209
+        },
+        {
+          "id": "playground/tests/test_orders.py::009",
+          "score": 0.789
+        },
+        {
+          "id": "playground/playground/orders.py::000",
+          "score": 0.7566
+        },
+        {
+          "id": "playground/playground/orders.py::001",
+          "score": 0.7509
+        },
+        {
+          "id": "playground/tests/test_orders.py::008",
+          "score": 0.7314
+        }
+      ],
+      "prompt_chars": 9750,
+      "task": "OrderLog.by_status",
+      "file": "playground/playground/orders.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 2,
+      "tests_passed": 2,
+      "solved": true
+    },
+    {
+      "text": "```python\ndef can_afford(self, total: Money) -> bool:\n    if not isinstance(total, Money):\n        raise TypeError(\"total must be Money\")\n    return self.balance + total <= self.credit_limit\n```",
+      "prompt_tokens": 2311,
+      "completion_tokens": 247,
+      "seconds": 2.07,
+      "retrieved": [
+        {
+          "id": "playground/playground/models.py::003",
+          "score": 0.8637
+        },
+        {
+          "id": "playground/tests/test_models.py::010",
+          "score": 0.8067
+        },
+        {
+          "id": "playground/tests/test_models.py::009",
+          "score": 0.7178
+        },
+        {
+          "id": "playground/playground/orders.py::002",
+          "score": 0.7027
+        },
+        {
+          "id": "playground/tests/test_orders.py::000",
+          "score": 0.6829
+        }
+      ],
+      "prompt_chars": 8807,
+      "task": "Customer.can_afford",
+      "file": "playground/playground/models.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 8,
+      "tests_passed": 8,
+      "solved": true
+    },
+    {
+      "text": "```python\ndef __len__(self) -> int:\n    return len(self._items)\n```",
+      "prompt_tokens": 2586,
+      "completion_tokens": 93,
+      "seconds": 1.25,
+      "retrieved": [
+        {
+          "id": "playground/playground/orders.py::001",
+          "score": 0.7789
+        },
+        {
+          "id": "playground/playground/orders.py::002",
+          "score": 0.7412
+        },
+        {
+          "id": "playground/playground/orders.py::003",
+          "score": 0.7354
+        },
+        {
+          "id": "playground/playground/models.py::002",
+          "score": 0.7145
+        },
+        {
+          "id": "playground/tests/test_orders.py::005",
+          "score": 0.6971
+        }
+      ],
+      "prompt_chars": 10140,
+      "task": "Order.__len__",
+      "file": "playground/playground/orders.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 6,
+      "tests_passed": 6,
+      "solved": true
+    },
+    {
+      "text": "```python\n    def price(self, items: Sequence[LineItem]) -> Money:\n        total = self._base.price(items)\n        total_quantity = sum(item.quantity for item in items)\n        if total_quantity < self._threshold:\n            return total\n        discount = (total * self._percent_off) // 100\n        return total - discount\n```",
+      "prompt_tokens": 2630,
+      "completion_tokens": 723,
+      "seconds": 4.35,
+      "retrieved": [
+        {
+          "id": "playground/playground/pricing.py::001",
+          "score": 0.8937
+        },
+        {
+          "id": "playground/tests/test_pricing.py::003",
+          "score": 0.8367
+        },
+        {
+          "id": "playground/tests/test_pricing.py::002",
+          "score": 0.8179
+        },
+        {
+          "id": "playground/tests/test_base.py::002",
+          "score": 0.7186
+        },
+        {
+          "id": "playground/tests/test_pricing.py::001",
+          "score": 0.7158
+        }
+      ],
+      "prompt_chars": 9407,
+      "task": "BulkDiscountPricing.price",
+      "file": "playground/playground/pricing.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 10,
+      "tests_passed": 2,
+      "solved": false
+    },
+    {
+      "text": "```python\ndef __contains__(self, event_type: object) -> bool:\n    if not isinstance(event_type, EventType):\n        return False\n    handlers = self._handlers.get(event_type)\n    return bool(handlers) and len(handlers) > 0\n```",
+      "prompt_tokens": 2419,
+      "completion_tokens": 322,
+      "seconds": 2.67,
+      "retrieved": [
+        {
+          "id": "playground/playground/events.py::000",
+          "score": 0.8552
+        },
+        {
+          "id": "playground/tests/test_events.py::003",
+          "score": 0.84
+        },
+        {
+          "id": "playground/tests/test_events.py::002",
+          "score": 0.7725
+        },
+        {
+          "id": "playground/tests/test_events.py::000",
+          "score": 0.7703
+        },
+        {
+          "id": "playground/tests/test_events.py::001",
+          "score": 0.7414
+        }
+      ],
+      "prompt_chars": 9685,
+      "task": "EventBus.__contains__",
+      "file": "playground/playground/events.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 6,
+      "tests_passed": 6,
+      "solved": true
+    },
+    {
+      "text": "```python\ndef __bool__(self) -> bool:\n    return self._cents != 0\n```",
+      "prompt_tokens": 2757,
+      "completion_tokens": 160,
+      "seconds": 1.45,
+      "retrieved": [
+        {
+          "id": "playground/playground/models.py::000",
+          "score": 0.8456
+        },
+        {
+          "id": "playground/tests/test_models.py::000",
+          "score": 0.7731
+        },
+        {
+          "id": "playground/tests/test_models.py::002",
+          "score": 0.7699
+        },
+        {
+          "id": "playground/tests/test_models.py::003",
+          "score": 0.7527
+        },
+        {
+          "id": "playground/tests/test_models.py::001",
+          "score": 0.7426
+        }
+      ],
+      "prompt_chars": 10115,
+      "task": "Money.__bool__",
+      "file": "playground/playground/models.py",
+      "written": true,
+      "write_error": null,
+      "tests_total": 2,
+      "tests_passed": 2,
+      "solved": true
+    }
+  ],
+  "gen_model": "gpt-5-nano",
+  "summary_model": "gpt-5-mini",
+  "baseline": {
+    "ran": 481,
+    "failed": 52,
+    "passed": 429
+  },
+  "prompt_tokens": 25838,
+  "completion_tokens": 4139
+}

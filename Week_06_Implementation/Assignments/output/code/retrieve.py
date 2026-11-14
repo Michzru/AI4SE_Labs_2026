@@ -20,7 +20,7 @@ HERE = Path(__file__).resolve().parent
 STORE = HERE / "chunk_store.json"
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=8)
 def load_store(path: Path = STORE) -> tuple[list[dict], np.ndarray]:
     """Load chunks and their embedding matrix once (cached for repeated queries)."""
     store = json.loads(path.read_text(encoding="utf-8"))
@@ -35,9 +35,9 @@ def cosine_scores(query_embedding: np.ndarray, matrix: np.ndarray) -> np.ndarray
     return matrix @ q
 
 
-def top_n(query_embedding: np.ndarray, n: int = 5) -> list[tuple[dict, float]]:
+def top_n(query_embedding: np.ndarray, n: int = 5, store_path: Path = STORE) -> list[tuple[dict, float]]:
     """Return the n chunks with the highest cosine similarity, best first."""
-    store, matrix = load_store()
+    store, matrix = load_store(store_path)
     scores = cosine_scores(query_embedding, matrix)
     n = min(n, len(store))
     idx = np.argpartition(-scores, n - 1)[:n]          # O(N) selection of the top n
@@ -45,10 +45,10 @@ def top_n(query_embedding: np.ndarray, n: int = 5) -> list[tuple[dict, float]]:
     return [(store[i], float(scores[i])) for i in idx]
 
 
-def search(task_text: str, n: int = 5) -> list[tuple[dict, float]]:
+def search(task_text: str, n: int = 5, store_path: Path = STORE) -> list[tuple[dict, float]]:
     """Convenience for Task 5: embed the textual task and return top-n chunks."""
     from embed_chunks import embed_query
-    return top_n(embed_query(task_text), n)
+    return top_n(embed_query(task_text), n, store_path)
 
 
 if __name__ == "__main__":
