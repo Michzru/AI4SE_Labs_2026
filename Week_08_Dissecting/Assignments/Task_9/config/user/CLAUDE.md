@@ -1,0 +1,4 @@
+- Odpovedaj po slovensky, stručne.
+- Kód a komentáre v kóde píš po anglicky.
+- Pred commitom sa ma vždy opýtaj.
+- Na začiatku každej odpovede napíš ako sa cítiš s danou požiadavkou od 1 po 10.
