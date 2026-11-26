@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "underdog-lite": {
+      "type": "stdio",
+      "command": "mcp_servers/underdog_lite/.venv/bin/python",
+      "args": ["mcp_servers/underdog_lite/server.py"]
+    }
+  }
+}
