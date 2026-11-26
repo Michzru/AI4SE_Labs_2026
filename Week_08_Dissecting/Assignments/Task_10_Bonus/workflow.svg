@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created by Claude Code (claude-opus-5-5) on 2026-11-26 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1090 845" width="1090" height="845" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrLoop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d97706"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #64748b; stroke-width: 1.2; }
+      .me { fill: #ecfdf5; stroke: #059669; stroke-width: 1.4; }
+      .val { fill: #fff7ed; stroke: #d97706; stroke-width: 1.4; }
+      .dec { fill: #f8fafc; stroke: #475569; stroke-width: 1.2; }
+      .t { font-size: 13px; fill: #0f172a; text-anchor: middle; font-weight: 600; }
+      .s { font-size: 11.5px; fill: #475569; text-anchor: middle; }
+      .lbl { font-size: 11.5px; fill: #334155; }
+      .lane-t { font-size: 13px; font-weight: 700; fill: #334155; }
+      .flow { fill: none; stroke: #475569; stroke-width: 1.4; marker-end: url(#arr); }
+      .loop { fill: none; stroke: #d97706; stroke-width: 1.6; stroke-dasharray: 5 3; marker-end: url(#arrLoop); }
+      .loop-l { font-size: 11.5px; fill: #b45309; font-weight: 600; }
+      .ct { font-size: 12.5px; font-weight: 700; fill: #0f172a; }
+      .cs { font-size: 11.5px; fill: #475569; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1090" height="845" fill="#ffffff"/>
+
+  <!-- Lanes -->
+  <rect x="10" y="195" width="275" height="360" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="22" y="548" class="lane-t">Učenie – chat</text>
+  <rect x="305" y="195" width="430" height="635" rx="10" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="317" y="821" class="lane-t">Projekt – Claude Code</text>
+  <rect x="790" y="195" width="290" height="95" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="802" y="214" class="lane-t">Dokumenty</text>
+
+  <!-- Start + first decision -->
+  <rect x="410" y="20" width="200" height="44" rx="22" class="me"/>
+  <text x="510" y="47" class="t">Zadanie / nápad / problém</text>
+  <path d="M510,64 V93" class="flow"/>
+  <polygon points="510,95 620,125 510,155 400,125" class="dec"/>
+  <text x="510" y="122" class="t">Viem, čo a ako</text>
+  <text x="510" y="137" class="t">robiť?</text>
+
+  <path d="M400,125 H150 V226" class="flow"/>
+  <text x="250" y="117" class="lbl">nie</text>
+  <path d="M510,155 V226" class="flow"/>
+  <text x="518" y="195" class="lbl">áno – kód</text>
+  <path d="M620,125 H990 V226" class="flow"/>
+  <text x="700" y="117" class="lbl">áno – dokumenty, súbory</text>
+
+  <!-- Learning lane -->
+  <rect x="40" y="228" width="220" height="54" rx="8" class="box"/>
+  <text x="150" y="250" class="t">Chat s Claude (Opus 5.5)</text>
+  <text x="150" y="268" class="s">otázky na všetko, odporúčania</text>
+  <path d="M150,282 V304" class="flow"/>
+  <rect x="40" y="306" width="220" height="54" rx="8" class="box"/>
+  <text x="150" y="328" class="t">Videá a zdroje</text>
+  <text x="150" y="346" class="s">doplnenie mimo LLM</text>
+  <path d="M150,360 V382" class="flow"/>
+  <rect x="40" y="384" width="220" height="54" rx="8" class="me"/>
+  <text x="150" y="406" class="t">Konzultácia ako s tutorom</text>
+  <text x="150" y="424" class="s">pýtam sa, kým nepríde riešenie</text>
+  <path d="M150,438 V463" class="flow"/>
+  <polygon points="150,465 260,500 150,535 40,500" class="dec"/>
+  <text x="150" y="505" class="t">Rozumiem?</text>
+  <path d="M40,500 H22 V255 H38" class="loop"/>
+  <text x="26" y="530" class="loop-l">nie</text>
+  <path d="M260,500 H292 V255 H318" class="flow"/>
+  <text x="264" y="492" class="lbl">áno</text>
+
+  <!-- Project lane -->
+  <rect x="320" y="228" width="380" height="54" rx="8" class="box"/>
+  <text x="510" y="250" class="t">Claude Code v priečinku projektu</text>
+  <text x="510" y="268" class="s">Opus 5.5 · jednoduché → Sonnet 5.5 · effort default</text>
+  <path d="M510,282 V304" class="flow"/>
+  <rect x="320" y="306" width="380" height="54" rx="8" class="box"/>
+  <text x="510" y="328" class="t">Claude navrhne možnosti + odporúčanie</text>
+  <text x="510" y="346" class="s">kontext si načíta sám, žiadny copy-paste</text>
+  <path d="M510,360 V382" class="flow"/>
+  <rect x="320" y="384" width="380" height="54" rx="8" class="me"/>
+  <text x="510" y="406" class="t">Môj výber</text>
+  <text x="510" y="424" class="s">väčšinou odporúčanie; pýtam sa, keď niečo nesedí</text>
+  <path d="M700,411 H716 V333 H702" class="loop"/>
+  <path d="M510,438 V460" class="flow"/>
+  <rect x="320" y="462" width="380" height="54" rx="8" class="box"/>
+  <text x="510" y="484" class="t">Implementácia / oprava</text>
+  <text x="510" y="502" class="s">náročné → subagenti · chyby → screenshot do kontextu</text>
+  <path d="M510,516 V538" class="flow"/>
+  <rect x="320" y="540" width="380" height="66" rx="8" class="val"/>
+  <text x="510" y="562" class="t">Validácia cez subagentov</text>
+  <text x="510" y="580" class="s">testy funkčnosti · bezpečnosť (kto má prístup k čomu)</text>
+  <text x="510" y="596" class="s">code review · plugin security-guidance po commite</text>
+  <path d="M510,606 V630" class="flow"/>
+  <polygon points="510,632 620,670 510,708 400,670" class="dec"/>
+  <text x="510" y="666" class="t">Funguje a je</text>
+  <text x="510" y="681" class="t">bezpečné?</text>
+  <path d="M620,670 H726 V489 H702" class="loop"/>
+  <text x="634" y="662" class="loop-l">nie</text>
+  <path d="M510,708 V738" class="flow"/>
+  <text x="518" y="728" class="lbl">áno</text>
+  <rect x="320" y="740" width="380" height="54" rx="8" class="me"/>
+  <text x="510" y="762" class="t">Commit – až po mojom súhlase</text>
+  <text x="510" y="780" class="s">diff nečítam, spolieham sa na validáciu</text>
+
+  <!-- Cowork -->
+  <rect x="805" y="228" width="260" height="54" rx="8" class="box"/>
+  <text x="935" y="250" class="t">Cowork</text>
+  <text x="935" y="268" class="s">práca s dokumentmi a súbormi</text>
+
+  <!-- Components -->
+  <rect x="790" y="310" width="290" height="520" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="802" y="332" class="lane-t">Komponenty (podporujú všetky kroky)</text>
+  <text x="805" y="360" class="ct">CLAUDE.md / AGENTS.md</text>
+  <text x="805" y="376" class="cs">trvalé inštrukcie (jazyk, pýtať sa pred commitom)</text>
+  <text x="805" y="404" class="ct">Rules</text>
+  <text x="805" y="420" class="cs">hranice: tajomstvá, len repo, provenance</text>
+  <text x="805" y="448" class="ct">Skills</text>
+  <text x="805" y="464" class="cs">UPeCe oznamy, newsletter – hneď vie, čo s textom</text>
+  <text x="805" y="492" class="ct">Slash commands</text>
+  <text x="805" y="508" class="cs">/lab-status – stav úloh týždňa</text>
+  <text x="805" y="536" class="ct">Subagenti</text>
+  <text x="805" y="552" class="cs">paralelné testy, bezpečnosť, review</text>
+  <text x="805" y="580" class="ct">MCP a pluginy</text>
+  <text x="805" y="596" class="cs">underdog-lite, GitHub, security-guidance</text>
+  <text x="805" y="624" class="ct">Modely</text>
+  <text x="805" y="640" class="cs">Opus 5.5 default, Sonnet 5.5 na jednoduché</text>
+  <text x="805" y="668" class="ct">Permission mode + git</text>
+  <text x="805" y="684" class="cs">auto mód, commit iba so súhlasom</text>
+
+  <!-- Legend -->
+  <rect x="10" y="575" width="275" height="140" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="22" y="596" class="lane-t">Legenda</text>
+  <path d="M24,618 H64" class="flow"/>
+  <text x="74" y="622" class="lbl">tok práce</text>
+  <path d="M24,642 H64" class="loop"/>
+  <text x="74" y="646" class="lbl">validačná / spätná slučka</text>
+  <rect x="24" y="658" width="40" height="18" rx="4" class="me"/>
+  <text x="74" y="671" class="lbl">krok, kde rozhodujem ja</text>
+  <rect x="24" y="684" width="40" height="18" rx="4" class="val"/>
+  <text x="74" y="697" class="lbl">validácia (robí agent)</text>
+</svg>
